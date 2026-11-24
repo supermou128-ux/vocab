@@ -395,32 +395,109 @@
       background: #FAFAFA;
     }
 
-    .feedback-banner {
-      margin-top: 18px;
-      padding: 16px;
-      border-radius: var(--radius-md);
-      font-size: 1.12rem;
-      font-weight: 700;
-      display: none;
-      line-height: 1.55;
+    /* 答錯後中央顯眼答案卡 */
+    .wrong-center-box {
+      background: linear-gradient(135deg, #FFF5F5 0%, #FFE3E3 100%);
+      border: 4px solid #EF5350;
+      border-radius: 24px;
+      padding: 28px 20px;
+      margin: 14px auto 8px;
+      max-width: 480px;
+      box-shadow: 0 10px 24px rgba(239, 83, 80, 0.18);
+      animation: popIn 0.25s ease;
     }
 
-    .feedback-correct {
-      background: #E8F5E9;
-      color: #2E7D32;
-      border: 2px solid #66BB6A;
-    }
-
-    .feedback-locked-pass {
-      background: #FFF8E1;
-      color: #E65100;
-      border: 2px solid #FFB300;
-    }
-
-    .feedback-wrong {
-      background: #FFEBEE;
+    .wrong-center-title {
+      font-size: 1.15rem;
+      font-weight: 900;
       color: #C62828;
-      border: 2px solid #EF5350;
+      margin-bottom: 12px;
+    }
+
+    .wrong-center-en {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #B71C1C;
+      letter-spacing: 1px;
+      margin: 8px 0;
+      word-break: break-word;
+    }
+
+    .wrong-center-zh {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: #37474F;
+      margin: 8px 0 20px;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* 滿版動畫遮罩 */
+    .fullscreen-anim-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      overflow: hidden;
+      pointer-events: none;
+      animation: overlayFade 1.5s ease forwards;
+    }
+
+    .fullscreen-anim-overlay.happy {
+      background: radial-gradient(circle, rgba(255, 241, 118, 0.92) 0%, rgba(129, 199, 132, 0.92) 100%);
+      color: #1B5E20;
+    }
+
+    .fullscreen-anim-overlay.sad {
+      background: radial-gradient(circle, rgba(144, 164, 174, 0.92) 0%, rgba(55, 71, 79, 0.95) 100%);
+      color: #ECEFF1;
+    }
+
+    .anim-main-emoji {
+      font-size: 6rem;
+      animation: bounceScale 0.85s ease infinite alternate;
+      z-index: 2;
+    }
+
+    .anim-main-text {
+      font-size: 2.6rem;
+      font-weight: 900;
+      margin-top: 12px;
+      z-index: 2;
+      text-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    }
+
+    .floating-particle {
+      position: absolute;
+      top: -40px;
+      font-size: 2.2rem;
+      animation: fallParticle 1.45s linear forwards;
+      z-index: 1;
+    }
+
+    @keyframes fallParticle {
+      0% { transform: translateY(-40px) rotate(0deg) scale(0.8); opacity: 1; }
+      100% { transform: translateY(105vh) rotate(360deg) scale(1.2); opacity: 0; }
+    }
+
+    @keyframes bounceScale {
+      from { transform: scale(0.95) translateY(0); }
+      to { transform: scale(1.15) translateY(-10px); }
+    }
+
+    @keyframes overlayFade {
+      0% { opacity: 0; }
+      15% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
     }
 
     .grid-2 {
@@ -598,7 +675,7 @@
       </div>
 
       <div class="form-group">
-        <label>檢視或刪除分類（刪除分類會一併刪除該分類所有單字卡）：</label>
+        <label>檢視或刪除分類（刪除分類會一併刪除該分類所有單字卡，需輸入密碼）：</label>
         <div style="display:flex; gap:10px; align-items:center;">
           <select id="manage-cat-select" onchange="renderWordList()"></select>
           <button class="btn btn-danger" onclick="deleteSelectedCategory()" style="white-space:nowrap;">🗑️ 刪除此分類</button>
@@ -670,8 +747,8 @@
   const FIXED_USER = 'Serene';
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
   const MAX_CARDS_PER_CATEGORY = 1000;
-  const EASY_DELETE_PASSCODE = '0000';
-  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v5';
+  const DELETE_PASSCODE = '0000';
+  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v7';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
 
   const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
@@ -681,10 +758,10 @@
   let cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
   let currentReviewCardId = null;
   let lastShownCardId = null;
-  let awaitingNext = false;
   let chartInstance = null;
   let preferredVoice = null;
   let hintClearTimer = null;
+  let audioCtx = null;
 
   function createDefaultUserData() {
     return {
@@ -751,6 +828,105 @@
     }
 
     return { shownCount, wrongCount, wrongRate, badgeClass, badgeText };
+  }
+
+  function ensureAudioContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!audioCtx) audioCtx = new AudioContextClass();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  }
+
+  function playHappySound() {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    const now = ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+      gain.gain.setValueAtTime(0.001, now + idx * 0.11);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + idx * 0.11 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.24);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.11);
+      osc.stop(now + idx * 0.11 + 0.25);
+    });
+  }
+
+  function playSadSound() {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    const notes = [392.0, 349.23, 311.13, 261.63];
+    const now = ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.16);
+      gain.gain.setValueAtTime(0.001, now + idx * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.14, now + idx * 0.16 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.16 + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.16);
+      osc.stop(now + idx * 0.16 + 0.3);
+    });
+  }
+
+  function showFullScreenAnimation(isHappy, durationMs = 1500) {
+    return new Promise(resolve => {
+      const existing = document.getElementById('fullscreen-result-anim');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'fullscreen-result-anim';
+      overlay.className = `fullscreen-anim-overlay ${isHappy ? 'happy' : 'sad'}`;
+      overlay.style.animationDuration = `${durationMs}ms`;
+
+      const particles = isHappy
+        ? ['🌟', '🎉', '💖', '✨', '🏆', '🎈']
+        : ['💧', '🌧️', '😿', '💔', '☁️'];
+
+      for (let i = 0; i < 22; i++) {
+        const p = document.createElement('div');
+        p.className = 'floating-particle';
+        p.textContent = particles[i % particles.length];
+        p.style.left = `${Math.random() * 96}%`;
+        p.style.animationDelay = `${Math.random() * 0.35}s`;
+        p.style.animationDuration = `${(durationMs / 1000) * 0.9}s`;
+        overlay.appendChild(p);
+      }
+
+      const mainEmoji = document.createElement('div');
+      mainEmoji.className = 'anim-main-emoji';
+      mainEmoji.textContent = isHappy ? '🥳🌟🎉' : '😢💧🌧️';
+
+      const mainText = document.createElement('div');
+      mainText.className = 'anim-main-text';
+      mainText.textContent = isHappy ? '答對了！太棒啦！' : '答錯了！沒關係，我們看答案！';
+
+      overlay.appendChild(mainEmoji);
+      overlay.appendChild(mainText);
+      document.body.appendChild(overlay);
+
+      if (isHappy) {
+        playHappySound();
+      } else {
+        playSadSound();
+      }
+
+      setTimeout(() => {
+        overlay.remove();
+        resolve();
+      }, durationMs);
+    });
   }
 
   function pickSystemVoice() {
@@ -863,6 +1039,8 @@
     try {
       const rawData =
         localStorage.getItem(LOCAL_DATA_KEY) ||
+        localStorage.getItem('serene_fib_vocab_data_v6') ||
+        localStorage.getItem('serene_fib_vocab_data_v5') ||
         localStorage.getItem('serene_fib_vocab_data_v4') ||
         localStorage.getItem('serene_fib_vocab_data_v3') ||
         localStorage.getItem('serene_fib_vocab_data_v2');
@@ -1005,7 +1183,6 @@
       if (!Array.isArray(userData.dailyLog.completedIds)) userData.dailyLog.completedIds = [];
       if (!Array.isArray(userData.dailyLog.failedTodayIds)) userData.dailyLog.failedTodayIds = [];
       if (!Array.isArray(userData.dailyLog.answeredTodayIds)) {
-        // 向下相容：若舊資料無 answeredTodayIds，將今天已完成或失誤的卡片納入
         const seed = new Set([...userData.dailyLog.completedIds, ...userData.dailyLog.failedTodayIds]);
         userData.dailyLog.answeredTodayIds = [...seed];
       }
@@ -1023,15 +1200,6 @@
     return Array.isArray(userData.dailyLog.answeredTodayIds) && userData.dailyLog.answeredTodayIds.includes(cardId);
   }
 
-  function getTodayAccuracyInfo() {
-    syncDailyRollover();
-    const total = userData.dailyLog.totalAttempts || 0;
-    const correct = userData.dailyLog.correctAttempts || 0;
-    const pct = total > 0 ? Math.round((correct / total) * 100) : null;
-    return { total, correct, pct };
-  }
-
-  // 今日剩餘題數 = 每日早上 6:00 起需增加/複習的字卡 + 今天新增的新字卡 - 今天已經回答過的字卡
   function getTodayCounts() {
     syncDailyRollover();
     const today = getLogicalDateStr();
@@ -1042,30 +1210,54 @@
     const answeredTodayCount = scheduledOrNewTodayCards.filter(c => hasCardBeenAnsweredToday(c.id)).length;
     const remainingCount = Math.max(0, scheduledOrNewTodayCards.length - answeredTodayCount);
 
-    const dueCards = userData.cards.filter(c => c.dueDate <= today || isCardLockedToday(c));
-    const todoCount = dueCards.length;
     const validCompleted = userData.dailyLog.completedIds.filter(id =>
       userData.cards.some(c => c.id === id)
     );
     const doneCount = validCompleted.length;
+
+    const dueCards = userData.cards.filter(c => c.dueDate <= today || isCardLockedToday(c));
+    // 今日未完成題數：包含今日到期/鎖定且尚未列入今日已完成的題數（或已作答未完成數）
+    const todoCount = dueCards.filter(c => !validCompleted.includes(c.id)).length;
+
     return { doneCount, todoCount, remainingCount, dueCards };
+  }
+
+  // 今日答對率：今日剩餘題數為 0 才計算（今日未完成題數 / 今日已完成題數，以百分比表示）；不為 0 則清空（--%）
+  function getConditionalAccuracyText(remainingCount, todoCount, doneCount) {
+    if (remainingCount !== 0) {
+      return '--%';
+    }
+    if (doneCount <= 0) {
+      return '--%';
+    }
+    const rate = Math.round((todoCount / doneCount) * 100);
+    return `${rate}%`;
   }
 
   function updateTopCounters() {
     const { doneCount, todoCount, remainingCount } = getTodayCounts();
-    const { pct } = getTodayAccuracyInfo();
-    const pctText = pct === null ? '--%' : `${pct}%`;
+    const accText = getConditionalAccuracyText(remainingCount, todoCount, doneCount);
 
     document.getElementById('today-done-count').textContent = doneCount;
     document.getElementById('today-todo-count').textContent = todoCount;
     document.getElementById('today-rem-count').textContent = remainingCount;
-    document.getElementById('today-acc-rate').textContent = pctText;
+    document.getElementById('today-acc-rate').textContent = accText;
 
     document.getElementById('stat-done-today').textContent = doneCount;
     document.getElementById('stat-todo-today').textContent = todoCount;
     document.getElementById('stat-rem-today').textContent = remainingCount;
     document.getElementById('stat-total-cards').textContent = userData.cards.length;
-    document.getElementById('stat-acc-today').textContent = pctText;
+    document.getElementById('stat-acc-today').textContent = accText;
+  }
+
+  function verifyDeletePasscode() {
+    const inputCode = prompt('🔐 刪除確認\n請輸入刪除密碼（4位數）：');
+    if (inputCode === null) return false;
+    if (inputCode.trim() !== DELETE_PASSCODE) {
+      alert('❌ 密碼錯誤！只有輸入正確密碼才能刪除喔。');
+      return false;
+    }
+    return true;
   }
 
   function switchTab(tabName) {
@@ -1138,6 +1330,8 @@
       alert('至少需要保留 1 個分類喔！你可以先新增其他分類，再刪除此分類。');
       return;
     }
+
+    if (!verifyDeletePasscode()) return;
 
     const cardsInCat = userData.cards.filter(c => c.categoryId === catId);
     const confirmMsg = cardsInCat.length > 0
@@ -1214,6 +1408,7 @@
   function removeCardById(cardId, askConfirm = true) {
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return false;
+    if (!verifyDeletePasscode()) return false;
     if (askConfirm && !confirm(`確定要刪除單字卡「${card.en}」嗎？`)) {
       return false;
     }
@@ -1231,19 +1426,8 @@
     removeCardById(cardId, true);
   }
 
-  // 低調趣味刪除入口：需輸入密碼 0000 才允許刪除
   function deleteCurrentReviewCardWithPasscode() {
     if (!currentReviewCardId) return;
-    const card = userData.cards.find(c => c.id === currentReviewCardId);
-    if (!card) return;
-
-    const inputCode = prompt('🎈🔍 發現超簡單單字想刪掉嗎？\n請輸入家長密碼（4位數）確認刪除：');
-    if (inputCode === null) return;
-    if (inputCode.trim() !== EASY_DELETE_PASSCODE) {
-      alert('密碼不正確喔！只有輸入正確密碼才能刪除單字卡。');
-      return;
-    }
-
     removeCardById(currentReviewCardId, false);
   }
 
@@ -1305,7 +1489,6 @@
     });
   }
 
-  // 出題順序：先考型態二（聽音寫英中），全部都回答過後再考型態一（看中文拼英文）；最後在今日未完成池輪流
   function pickNextReviewCard(filteredCards) {
     if (!filteredCards.length) return null;
     if (filteredCards.length === 1) return filteredCards[0];
@@ -1320,7 +1503,6 @@
       return unansweredType1.find(c => c.id !== lastShownCardId) || unansweredType1[0];
     }
 
-    // 全部題目都已回答過一輪，依序在今日未完成字卡內輪流複習（先型態二再型態一）
     const orderedPool = [
       ...filteredCards.filter(c => c.type === '2'),
       ...filteredCards.filter(c => c.type === '1')
@@ -1333,7 +1515,6 @@
   }
 
   function renderReviewCard(resetRotation = false) {
-    awaitingNext = false;
     if (resetRotation) lastShownCardId = null;
 
     const { dueCards } = getTodayCounts();
@@ -1360,9 +1541,6 @@
     currentReviewCardId = card.id;
     lastShownCardId = card.id;
 
-    card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
-    saveState(true);
-
     const stats = normalizeCardStats(card);
     const catName = userData.categories.find(c => c.id === card.categoryId)?.name || '未分類';
     const lockedToday = isCardLockedToday(card);
@@ -1383,6 +1561,7 @@
     const actionButtonsHtml = (submitBtnClass) => `
       <div class="review-actions-row">
         <button id="submit-ans-btn" class="btn ${submitBtnClass}" style="width:100%;" onclick="submitAnswer()">✨ 送出答案</button>
+        <button id="learned-today-btn" type="button" class="btn btn-green btn-sm" style="width:100%;" onclick="forceLearnCard('${card.id}')">🌟 今天真的學會了（強制進下一階並列入今日完成）</button>
       </div>
       <div>
         <button type="button" class="subtle-toy-delete" onclick="deleteCurrentReviewCardWithPasscode()">🎈🔍 太簡單了!刪掉!</button>
@@ -1396,39 +1575,43 @@
       }).join('');
 
       container.innerHTML = `
-        <div class="review-card">
+        <div class="review-card" id="active-review-card">
           ${headerMetaHtml}
-          <div class="prompt-chinese">${escapeHtml(card.zh)}</div>
-          <div class="prompt-pos">詞性：${escapeHtml(card.pos)}</div>
-          <div style="font-size:0.95rem; color:var(--text-light);">請填入英文單字（共 ${card.en.replace(/\s/g, '').length} 個字母）：</div>
-          <div class="letter-slots" id="letter-slots-box">${slotsHtml}</div>
-          <div class="form-group" style="max-width:360px; margin:0 auto 16px;">
-            <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-              placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer()" />
+          <div id="question-body">
+            <div class="prompt-chinese">${escapeHtml(card.zh)}</div>
+            <div class="prompt-pos">詞性：${escapeHtml(card.pos)}</div>
+            <div style="font-size:0.95rem; color:var(--text-light);">請填入英文單字（共 ${card.en.replace(/\s/g, '').length} 個字母）：</div>
+            <div class="letter-slots" id="letter-slots-box">${slotsHtml}</div>
+            <div class="form-group" style="max-width:360px; margin:0 auto 16px;">
+              <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer()" />
+            </div>
+            ${actionButtonsHtml('btn-primary')}
           </div>
-          ${actionButtonsHtml('btn-primary')}
-          <div id="review-feedback" class="feedback-banner"></div>
+          <div id="wrong-answer-stage" style="display:none;"></div>
         </div>
       `;
       setTimeout(() => document.getElementById('ans-en-input')?.focus(), 100);
     } else {
       container.innerHTML = `
-        <div class="review-card" style="border-color: var(--accent-pink);">
+        <div class="review-card" id="active-review-card" style="border-color: var(--accent-pink);">
           ${headerMetaHtml}
-          <div style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-top:6px;">🎧 聽發音，寫出英文和中文！</div>
-          <button id="review-play-audio-btn" class="audio-btn-big" type="button">🔊</button>
-          <div style="font-size:0.9rem; color:var(--text-light); margin-bottom:16px;">（點擊喇叭可以再聽一次喔）</div>
-          <div class="form-group" style="max-width:380px; margin:0 auto 12px;">
-            <label>英文單字：</label>
-            <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-              placeholder="請輸入聽到的英文..." />
+          <div id="question-body">
+            <div style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-top:6px;">🎧 聽發音，寫出英文和中文！</div>
+            <button id="review-play-audio-btn" class="audio-btn-big" type="button">🔊</button>
+            <div style="font-size:0.9rem; color:var(--text-light); margin-bottom:16px;">（點擊喇叭可以再聽一次喔）</div>
+            <div class="form-group" style="max-width:380px; margin:0 auto 12px;">
+              <label>英文單字：</label>
+              <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                placeholder="請輸入聽到的英文..." />
+            </div>
+            <div class="form-group" style="max-width:380px; margin:0 auto 16px;">
+              <label>中文意思：</label>
+              <input type="text" id="ans-zh-input" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer()" />
+            </div>
+            ${actionButtonsHtml('btn-pink')}
           </div>
-          <div class="form-group" style="max-width:380px; margin:0 auto 16px;">
-            <label>中文意思：</label>
-            <input type="text" id="ans-zh-input" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer()" />
-          </div>
-          ${actionButtonsHtml('btn-pink')}
-          <div id="review-feedback" class="feedback-banner"></div>
+          <div id="wrong-answer-stage" style="display:none;"></div>
         </div>
       `;
       document.getElementById('review-play-audio-btn').onclick = () => speakEnglish(card.en);
@@ -1448,6 +1631,7 @@
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return;
 
+    syncDailyRollover();
     const today = getLogicalDateStr();
     const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
     const intervalDays = FIB_SEQUENCE[nextIndex];
@@ -1466,33 +1650,51 @@
 
     saveState(true);
     updateTopCounters();
-
-    const feedbackEl = document.getElementById('review-feedback');
-    if (feedbackEl) {
-      feedbackEl.className = 'feedback-banner feedback-correct';
-      feedbackEl.innerHTML = `🌟 已手動標記為「真的學會了」！<br>列入今日已完成單字，狀態推進至階段 #${card.fibIndex}（${intervalDays} 天後 ${card.dueDate} 再複習）`;
-    }
+    renderReviewCard(false);
   }
 
-  function submitAnswer() {
-    if (awaitingNext) {
-      renderReviewCard(false);
-      return;
-    }
+  function renderWrongAnswerCenterView(card) {
+    const questionBody = document.getElementById('question-body');
+    const wrongStage = document.getElementById('wrong-answer-stage');
+    if (questionBody) questionBody.style.display = 'none';
+    if (!wrongStage) return;
+
+    wrongStage.style.display = 'block';
+    wrongStage.innerHTML = `
+      <div class="wrong-center-box">
+        <div class="wrong-center-title">📖 正確答案看這裡</div>
+        <div class="wrong-center-en">${escapeHtml(card.en)}</div>
+        <div class="prompt-pos" style="margin-bottom:10px;">詞性：${escapeHtml(card.pos)}</div>
+        <div class="wrong-center-zh">${escapeHtml(card.zh)}</div>
+        <button id="mem-done-btn" type="button" class="btn btn-green" style="width:100%; max-width:320px; font-size:1.15rem;" onclick="renderReviewCard(false)">
+          ✅ 已經背好了!
+        </button>
+      </div>
+    `;
+    setTimeout(() => document.getElementById('mem-done-btn')?.focus(), 80);
+  }
+
+  async function submitAnswer() {
+    const submitBtn = document.getElementById('submit-ans-btn');
+    if (submitBtn && submitBtn.disabled) return;
+
     const card = userData.cards.find(c => c.id === currentReviewCardId);
     if (!card) return;
 
     syncDailyRollover();
     const today = getLogicalDateStr();
 
-    const enAns = normalizeCompareStr(document.getElementById('ans-en-input').value);
+    const enInputEl = document.getElementById('ans-en-input');
+    if (!enInputEl) return;
+    const enAns = normalizeCompareStr(enInputEl.value);
     const targetEn = normalizeCompareStr(card.en);
 
     let isCorrect = false;
     if (card.type === '1') {
       isCorrect = (enAns.length > 0 && enAns === targetEn);
     } else {
-      const zhAns = normalizeCompareStr(document.getElementById('ans-zh-input').value);
+      const zhInputEl = document.getElementById('ans-zh-input');
+      const zhAns = normalizeCompareStr(zhInputEl ? zhInputEl.value : '');
       const targetZhFull = normalizeCompareStr(card.zh);
       const validZhList = card.zh
         .split(/[,，/、;；]/)
@@ -1502,27 +1704,19 @@
       isCorrect = (enAns.length > 0 && enAns === targetEn) && zhMatch;
     }
 
-    // 記錄此單字卡在今天已經回答過
+    if (submitBtn) submitBtn.disabled = true;
+
+    card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
+
     if (!userData.dailyLog.answeredTodayIds.includes(card.id)) {
       userData.dailyLog.answeredTodayIds.push(card.id);
     }
 
     userData.dailyLog.totalAttempts = (userData.dailyLog.totalAttempts || 0) + 1;
-    if (isCorrect) {
-      userData.dailyLog.correctAttempts = (userData.dailyLog.correctAttempts || 0) + 1;
-    } else {
-      card.wrongCount = (typeof card.wrongCount === 'number' ? card.wrongCount : 0) + 1;
-    }
-
-    const { total, correct, pct } = getTodayAccuracyInfo();
-    const accSummaryHtml = `<div style="margin-top:8px; font-size:0.95rem; color:#1565C0;">📊 今日目前答對率：<b>${pct}%</b>（${correct} / ${total} 題）</div>`;
-
-    const feedbackEl = document.getElementById('review-feedback');
-    const btnEl = document.getElementById('submit-ans-btn');
     const wasLockedToday = isCardLockedToday(card);
 
     if (isCorrect) {
-      speakEnglish(card.en);
+      userData.dailyLog.correctAttempts = (userData.dailyLog.correctAttempts || 0) + 1;
 
       if (!wasLockedToday) {
         const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
@@ -1533,30 +1727,18 @@
         if (!userData.dailyLog.completedIds.includes(card.id)) {
           userData.dailyLog.completedIds.push(card.id);
         }
-
-        feedbackEl.className = 'feedback-banner feedback-correct';
-        feedbackEl.innerHTML = `
-          🎉 第一次就答對了！太厲害了！<br>
-          <small>已列入今日已完成，狀態推進至階段 #${card.fibIndex}（${intervalDays} 天後 ${card.dueDate} 再複習）</small>
-          ${accSummaryHtml}
-        `;
-        feedbackEl.style.display = 'block';
       } else {
         card.fibIndex = 0;
         card.dueDate = today;
-
-        feedbackEl.className = 'feedback-banner feedback-locked-pass';
-        feedbackEl.innerHTML = `
-          ✅ 這次答對了！<br>
-          <small>因為今天第一次作答未答對，此單字目前仍留在「今日未完成」（狀態 0），將於明天早上 6:00 後答對才自動晉級。</small>
-          <div style="margin-top:12px;">
-            <button type="button" class="btn btn-green btn-sm" onclick="forceLearnCard('${card.id}')">🌟 真的學會了（強制列入今日完成並進下一狀態）</button>
-          </div>
-          ${accSummaryHtml}
-        `;
-        feedbackEl.style.display = 'block';
       }
+
+      saveState(true);
+      updateTopCounters();
+      speakEnglish(card.en);
+      await showFullScreenAnimation(true, 1450);
+      renderReviewCard(false);
     } else {
+      card.wrongCount = (typeof card.wrongCount === 'number' ? card.wrongCount : 0) + 1;
       card.fibIndex = 0;
       card.dueDate = today;
       card.lockedDate = today;
@@ -1566,22 +1748,12 @@
         userData.dailyLog.failedTodayIds.push(card.id);
       }
 
+      saveState(true);
+      updateTopCounters();
+      await showFullScreenAnimation(false, 1500);
       speakEnglish(card.en);
-      feedbackEl.className = 'feedback-banner feedback-wrong';
-      feedbackEl.innerHTML = `
-        💪 加油！差一點點！<br>
-        正確答案：<b>${escapeHtml(card.en)}</b> (${escapeHtml(card.pos)}) — <b>${escapeHtml(card.zh)}</b><br>
-        <small>此單字狀態設為 0 並列入今日未完成，稍後會繼續在未完成清單中輪流出現複習！</small>
-        ${accSummaryHtml}
-      `;
-      feedbackEl.style.display = 'block';
+      renderWrongAnswerCenterView(card);
     }
-
-    saveState(true);
-    updateTopCounters();
-    awaitingNext = true;
-    btnEl.textContent = '➡️ 下一題';
-    btnEl.focus();
   }
 
   function renderStatsChart() {
