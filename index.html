@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>🌟 Serene 單字王（發音診斷測試版）🌟</title>
+  <title>🌟 Serene 單字王 🌟</title>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -297,37 +297,6 @@
       font-weight: 700;
     }
 
-    .diag-box {
-      background: #FFF8E1;
-      border: 2px solid #FFB300;
-      border-radius: var(--radius-md);
-      padding: 14px;
-      margin-top: 14px;
-      margin-bottom: 18px;
-    }
-
-    .diag-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .diag-log {
-      margin-top: 12px;
-      background: #263238;
-      color: #ECEFF1;
-      padding: 10px 12px;
-      border-radius: 12px;
-      font-family: monospace;
-      font-size: 0.85rem;
-      line-height: 1.5;
-      max-height: 180px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-
     .feedback-banner {
       margin-top: 18px;
       padding: 14px;
@@ -468,7 +437,7 @@
     </div>
 
     <div id="tab-add-word" class="tab-panel">
-      <h2 style="margin-top:0; color:var(--secondary);">✏️ 建立新的單字卡（含發音診斷台）</h2>
+      <h2 style="margin-top:0; color:var(--secondary);">✏️ 建立新的單字卡</h2>
       <div class="grid-2">
         <div class="form-group">
           <label>1. 選擇分類</label>
@@ -487,7 +456,7 @@
         <div class="form-group">
           <label>3. 英文單字</label>
           <div style="display:flex; gap:8px;">
-            <input type="text" id="word-en" value="advertisement" placeholder="例如：advertisement" />
+            <input type="text" id="word-en" placeholder="例如：advertisement" />
             <button class="btn btn-secondary btn-sm" type="button" onclick="previewSpeech()" style="white-space:nowrap;">🔊 試聽</button>
           </div>
           <div id="preview-speech-status" class="speech-status-hint"></div>
@@ -503,17 +472,6 @@
             <option value="na">na (其他/片語)</option>
           </select>
         </div>
-      </div>
-
-      <div class="diag-box">
-        <div style="font-weight:700; color:#E65100;">🧪 語音與音效診斷台（請逐項點擊並回報結果）</div>
-        <div class="diag-buttons">
-          <button class="btn btn-sm btn-yellow" type="button" onclick="diagBeep()">🔔 1. 測試嗶聲</button>
-          <button class="btn btn-sm btn-purple" type="button" onclick="diagNativeTTS()">🗣️ 2. 測試內建語音</button>
-          <button class="btn btn-sm btn-secondary" type="button" onclick="diagOnlineAudio()">🌐 3. 測試線上音檔</button>
-          <button class="btn btn-sm btn-pink" type="button" onclick="clearDiagLog()">🧹 清空紀錄</button>
-        </div>
-        <div id="diag-log" class="diag-log">等待測試中...</div>
       </div>
 
       <div class="form-group">
@@ -601,23 +559,8 @@
   let currentReviewCardId = null;
   let awaitingNext = false;
   let chartInstance = null;
-  let currentAudioEl = null;
   let preferredVoice = null;
   let hintClearTimer = null;
-
-  function logDiag(msg) {
-    const el = document.getElementById('diag-log');
-    if (!el) return;
-    const now = new Date().toTimeString().slice(0, 8);
-    if (el.textContent === '等待測試中...') el.textContent = '';
-    el.textContent += `[${now}] ${msg}\n`;
-    el.scrollTop = el.scrollHeight;
-  }
-
-  function clearDiagLog() {
-    const el = document.getElementById('diag-log');
-    if (el) el.textContent = '等待測試中...';
-  }
 
   function createDefaultUserData() {
     return {
@@ -683,124 +626,45 @@
     }
   }
 
-  // 診斷 1：Web Audio 嗶聲
-  function diagBeep() {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) {
-        logDiag('BEEP: 瀏覽器不支援 AudioContext');
-        return;
-      }
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') ctx.resume();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 880;
-      gain.gain.value = 0.2;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      setTimeout(() => {
-        osc.stop();
-        ctx.close();
-      }, 220);
-      logDiag(`BEEP: 已觸發 (state=${ctx.state})，請回報是否有聽到嗶聲`);
-    } catch (e) {
-      logDiag('BEEP ERROR: ' + e.message);
-    }
-  }
-
-  // 診斷 2：瀏覽器內建語音
-  function diagNativeTTS() {
-    const word = (document.getElementById('word-en')?.value || 'advertisement').trim();
-    if (!('speechSynthesis' in window)) {
-      logDiag('TTS: 不支援 speechSynthesis');
-      return;
-    }
-    const voices = window.speechSynthesis.getVoices() || [];
-    logDiag(`TTS 開始: word="${word}", voices=${voices.length}, paused=${window.speechSynthesis.paused}`);
-    try {
-      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(word);
-      utter.lang = 'en-US';
-      utter.rate = 0.9;
-      utter.volume = 1.0;
-      utter.onstart = () => logDiag('TTS EVENT: onstart');
-      utter.onend = () => logDiag('TTS EVENT: onend');
-      utter.onerror = (e) => logDiag('TTS EVENT: onerror (' + (e.error || 'unknown') + ')');
-      window.speechSynthesis.speak(utter);
-    } catch (e) {
-      logDiag('TTS CATCH: ' + e.message);
-    }
-  }
-
-  // 診斷 3：線上音訊連結
-  function diagOnlineAudio() {
-    const word = (document.getElementById('word-en')?.value || 'advertisement').trim();
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word)}&tl=en&client=tw-ob`;
-    logDiag(`AUDIO 開始: ${url}`);
-    try {
-      if (currentAudioEl) {
-        currentAudioEl.pause();
-        currentAudioEl = null;
-      }
-      const audio = new Audio(url);
-      currentAudioEl = audio;
-      audio.onplaying = () => logDiag('AUDIO EVENT: onplaying');
-      audio.onended = () => logDiag('AUDIO EVENT: onended');
-      audio.onerror = () => logDiag('AUDIO EVENT: onerror (可能被 CORS 或網路封鎖)');
-      const p = audio.play();
-      if (p && p.catch) {
-        p.catch(err => logDiag('AUDIO PLAY REJECT: ' + err.message));
-      }
-    } catch (e) {
-      logDiag('AUDIO CATCH: ' + e.message);
-    }
-  }
-
   function speakEnglish(text, isPreview = false) {
     const clean = (text || '').trim();
     if (!clean) return;
-
-    if (currentAudioEl) {
-      currentAudioEl.pause();
-      currentAudioEl.currentTime = 0;
-      currentAudioEl = null;
-    }
 
     if (isPreview) {
       showTemporaryHint('🔊 正在播放英文發音...', 3000);
     }
 
-    if ('speechSynthesis' in window) {
-      try {
-        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-        window.speechSynthesis.cancel();
-
-        const utter = new SpeechSynthesisUtterance(clean);
-        utter.lang = 'en-US';
-        if (preferredVoice) utter.voice = preferredVoice;
-        utter.rate = 0.9;
-        utter.volume = 1.0;
-
-        utter.onend = () => {
-          if (isPreview) showTemporaryHint('', 0);
-        };
-        utter.onerror = (e) => {
-          logDiag('試聽 TTS 錯誤: ' + (e.error || 'unknown'));
-          if (isPreview) showTemporaryHint('⚠️ 語音無聲或受阻，請查看診斷台', 3000);
-        };
-
-        window.speechSynthesis.speak(utter);
-        return;
-      } catch (e) {
-        logDiag('試聽例外: ' + e.message);
-      }
+    if (!('speechSynthesis' in window)) {
+      if (isPreview) showTemporaryHint('⚠️ 此瀏覽器不支援內建語音', 3000);
+      return;
     }
 
-    if (isPreview) showTemporaryHint('⚠️ 此瀏覽器不支援內建語音', 3000);
+    try {
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      window.speechSynthesis.cancel();
+
+      const voice = preferredVoice || pickSystemVoice();
+      const utter = new SpeechSynthesisUtterance(clean);
+      utter.lang = 'en-US';
+      if (voice) utter.voice = voice;
+      utter.rate = 0.9;
+      utter.volume = 1.0;
+
+      utter.onend = () => {
+        if (isPreview) showTemporaryHint('', 0);
+      };
+      utter.onerror = (e) => {
+        if (e && e.error === 'canceled') {
+          if (isPreview) showTemporaryHint('', 0);
+          return;
+        }
+        if (isPreview) showTemporaryHint('⚠️ 語音播放失敗，請檢查裝置音量或語音設定', 3000);
+      };
+
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      if (isPreview) showTemporaryHint('⚠️ 語音播放失敗', 3000);
+    }
   }
 
   function previewSpeech() {
@@ -811,7 +675,6 @@
       input?.focus();
       return;
     }
-    logDiag(`點擊「試聽」: "${val}"`);
     speakEnglish(val, true);
   }
 
@@ -1319,7 +1182,6 @@
     loadLocalState();
     syncDailyRollover();
     refreshAllUI();
-    logDiag('UA: ' + navigator.userAgent);
     if (cloudConfig.binId && cloudConfig.apiKey) {
       await pullFromCloud(false);
     }
