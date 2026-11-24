@@ -83,6 +83,7 @@
     .btn-pink { background: var(--accent-pink); }
     .btn-purple { background: var(--accent-purple); }
     .btn-yellow { background: var(--accent-yellow); color: #4E342E; }
+    .btn-danger { background: #EF5350; }
     .btn-sm { padding: 8px 14px; font-size: 0.92rem; border-radius: 12px; }
 
     #app-screen {
@@ -130,15 +131,15 @@
 
     .status-badges {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
     .badge {
-      padding: 8px 14px;
+      padding: 8px 13px;
       border-radius: 20px;
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 0.95rem;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -154,6 +155,12 @@
       background: #FFF3E0;
       color: #E65100;
       border: 2px solid #FFB74D;
+    }
+
+    .badge-acc {
+      background: #E3F2FD;
+      color: #1565C0;
+      border: 2px solid #64B5F6;
     }
 
     .nav-tabs {
@@ -207,10 +214,19 @@
       background: linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%);
       border: 4px dashed var(--accent-yellow);
       border-radius: var(--radius-lg);
-      padding: 30px 20px;
+      padding: 26px 20px;
       text-align: center;
-      max-width: 600px;
+      max-width: 620px;
       margin: 0 auto;
+    }
+
+    .card-meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
     }
 
     .card-tag {
@@ -220,7 +236,51 @@
       padding: 6px 14px;
       border-radius: 20px;
       font-size: 0.9rem;
-      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .diff-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 13px;
+      border-radius: 20px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      border: 2px solid transparent;
+    }
+
+    .diff-super-easy { background: #E8F5E9; color: #1B5E20; border-color: #81C784; }
+    .diff-easy { background: #E0F7FA; color: #006064; border-color: #4DD0E1; }
+    .diff-medium { background: #FFFDE7; color: #827717; border-color: #FFEE58; }
+    .diff-hard { background: #FFF3E0; color: #E65100; border-color: #FFB74D; }
+    .diff-super-hard { background: #FCE4EC; color: #880E4F; border-color: #F48FB1; }
+
+    .card-stats-strip {
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      background: #F5F7FA;
+      border: 2px solid #E0E0E0;
+      border-radius: 14px;
+      padding: 6px 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+
+    .locked-tag {
+      display: inline-block;
+      background: #FFF3E0;
+      color: #E65100;
+      border: 2px solid #FFB74D;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      margin-bottom: 8px;
     }
 
     .prompt-chinese {
@@ -238,7 +298,7 @@
       border-radius: 10px;
       font-weight: 700;
       font-size: 1.1rem;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .letter-slots {
@@ -246,7 +306,7 @@
       justify-content: center;
       flex-wrap: wrap;
       gap: 8px;
-      margin: 20px 0;
+      margin: 18px 0;
       min-height: 48px;
     }
 
@@ -297,19 +357,35 @@
       font-weight: 700;
     }
 
+    .review-actions-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+
     .feedback-banner {
       margin-top: 18px;
-      padding: 14px;
+      padding: 16px;
       border-radius: var(--radius-md);
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       font-weight: 700;
       display: none;
+      line-height: 1.55;
     }
 
     .feedback-correct {
       background: #E8F5E9;
       color: #2E7D32;
       border: 2px solid #66BB6A;
+    }
+
+    .feedback-locked-pass {
+      background: #FFF8E1;
+      color: #E65100;
+      border: 2px solid #FFB300;
     }
 
     .feedback-wrong {
@@ -368,28 +444,28 @@
 
     .stat-summary {
       display: flex;
-      gap: 16px;
+      gap: 14px;
       flex-wrap: wrap;
       margin-bottom: 20px;
     }
 
     .stat-box {
       flex: 1;
-      min-width: 150px;
+      min-width: 145px;
       background: linear-gradient(135deg, #E1F5FE, #B3E5FC);
-      padding: 18px;
+      padding: 16px;
       border-radius: var(--radius-md);
       text-align: center;
     }
 
     .stat-box h3 {
       margin: 0 0 6px;
-      font-size: 1rem;
+      font-size: 0.98rem;
       color: #0277BD;
     }
 
     .stat-box .num {
-      font-size: 2.2rem;
+      font-size: 2rem;
       font-weight: 900;
       color: #01579B;
     }
@@ -415,6 +491,7 @@
       <div class="status-badges">
         <div class="badge badge-done">✅ 今日已完成：<span id="today-done-count">0</span></div>
         <div class="badge badge-todo">🔥 今日未完成：<span id="today-todo-count">0</span></div>
+        <div class="badge badge-acc">🎯 今日答對率：<span id="today-acc-rate">--%</span></div>
       </div>
     </div>
 
@@ -429,7 +506,7 @@
     <div id="tab-review" class="tab-panel active">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0; color:var(--primary);">🌟 Serene 今日複習挑戰</h2>
-        <select id="review-cat-filter" style="width:auto; padding:8px 14px;" onchange="renderReviewCard()">
+        <select id="review-cat-filter" style="width:auto; padding:8px 14px;" onchange="renderReviewCard(true)">
           <option value="ALL">全部類別一起複習</option>
         </select>
       </div>
@@ -444,8 +521,9 @@
           <select id="word-category"></select>
         </div>
         <div class="form-group">
-          <label>2. 選擇字卡型態</label>
+          <label>2. 選擇字卡型態（預設同時產生兩種）</label>
           <select id="word-type">
+            <option value="BOTH" selected>🌟 同時產生兩種（型態一 + 型態二 各一張）</option>
             <option value="1">型態一：看中文 + 詞性 + 底線提示 ➔ 拼出英文</option>
             <option value="2">型態二：聽英文發音（無底線）➔ 寫出英文 + 中文</option>
           </select>
@@ -490,8 +568,11 @@
       </div>
 
       <div class="form-group">
-        <label>檢視分類單字列表：</label>
-        <select id="manage-cat-select" onchange="renderWordList()"></select>
+        <label>檢視或刪除分類（刪除分類會一併刪除該分類所有單字卡）：</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <select id="manage-cat-select" onchange="renderWordList()"></select>
+          <button class="btn btn-danger" onclick="deleteSelectedCategory()" style="white-space:nowrap;">🗑️ 刪除此分類</button>
+        </div>
       </div>
       <div id="cat-count-info" style="margin-bottom:12px; font-weight:700; color:var(--text-light);"></div>
       <div id="word-list-container"></div>
@@ -512,6 +593,10 @@
           <h3 style="color:#EF6C00;">🔥 今日待完成</h3>
           <div class="num" style="color:#E65100;" id="stat-todo-today">0</div>
         </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB);">
+          <h3 style="color:#1565C0;">🎯 今日答對率</h3>
+          <div class="num" style="color:#0D47A1;" id="stat-acc-today">--%</div>
+        </div>
       </div>
 
       <h3 style="color:var(--text-main); margin-bottom:10px;">📅 未來 3 個月（90 天）每日預計複習單字數量</h3>
@@ -525,16 +610,16 @@
       <div class="sync-box">
         <p style="margin-top:0; line-height:1.6;">
           本程式已固定使用 <strong>Serene</strong> 帳號，開啟網頁即直接進入，不需登入。<br>
-          若要在不同裝置看到完全相同的單字與進度，請在 <strong>JSONBin.io</strong> 建立一個免費 Bin，並填入下方的 <strong>Bin ID</strong> 與 <strong>X-Master-Key</strong>：
+          若未自行輸入金鑰，系統會自動使用預設的 <strong>JSONBin.io</strong> 設定進行同步：
         </p>
         <div class="grid-2">
           <div class="form-group">
             <label>Cloud Bin ID</label>
-            <input type="text" id="cloud-bin-id" placeholder="例如：674abc123def456..." />
+            <input type="text" id="cloud-bin-id" placeholder="預設：6b055488ac6210605aa0053b" />
           </div>
           <div class="form-group">
             <label>Cloud Master Key (X-Master-Key)</label>
-            <input type="password" id="cloud-api-key" placeholder="例如：$2a$10$..." />
+            <input type="password" id="cloud-api-key" placeholder="已內建預設 Master Key（留空即使用預設）" />
           </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -551,12 +636,16 @@
   const FIXED_USER = 'Serene';
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
   const MAX_CARDS_PER_CATEGORY = 1000;
-  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v2';
-  const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v1';
+  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v4';
+  const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
+
+  const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
+  const DEFAULT_MASTER_KEY = '$2a$10$5KW9GkpwVJbQ16MRT.2vtOmJnDfwsLywrc0H3oSugrl5aQwgHral2';
 
   let userData = createDefaultUserData();
-  let cloudConfig = { binId: '', apiKey: '' };
+  let cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
   let currentReviewCardId = null;
+  let lastShownCardId = null;
   let awaitingNext = false;
   let chartInstance = null;
   let preferredVoice = null;
@@ -570,7 +659,10 @@
       cards: [],
       dailyLog: {
         date: getLogicalDateStr(),
-        completedIds: []
+        completedIds: [],
+        failedTodayIds: [],
+        totalAttempts: 0,
+        correctAttempts: 0
       }
     };
   }
@@ -591,6 +683,38 @@
     const nm = String(dt.getMonth() + 1).padStart(2, '0');
     const nd = String(dt.getDate()).padStart(2, '0');
     return `${ny}-${nm}-${nd}`;
+  }
+
+  function normalizeCompareStr(str) {
+    return String(str || '').replace(/\s+/g, '').toLowerCase();
+  }
+
+  function normalizeCardStats(card) {
+    const shownCount = typeof card.shownCount === 'number' ? card.shownCount : 0;
+    const wrongCount = typeof card.wrongCount === 'number' ? card.wrongCount : 0;
+    const wrongRate = shownCount > 0 ? Math.round((wrongCount / shownCount) * 100) : 0;
+
+    let badgeClass = 'diff-super-easy';
+    let badgeText = '🐣 Super Easy (超簡單)';
+
+    if (wrongRate <= 10) {
+      badgeClass = 'diff-super-easy';
+      badgeText = '🐣 Super Easy (超簡單)';
+    } else if (wrongRate <= 25) {
+      badgeClass = 'diff-easy';
+      badgeText = '🐥 Easy (簡單)';
+    } else if (wrongRate <= 50) {
+      badgeClass = 'diff-medium';
+      badgeText = '🦊 Medium (還可以)';
+    } else if (wrongRate <= 75) {
+      badgeClass = 'diff-hard';
+      badgeText = '🐯 Hard (難)';
+    } else {
+      badgeClass = 'diff-super-hard';
+      badgeText = '🐉 Super Hard (超難)';
+    }
+
+    return { shownCount, wrongCount, wrongRate, badgeClass, badgeText };
   }
 
   function pickSystemVoice() {
@@ -678,23 +802,43 @@
     speakEnglish(val, true);
   }
 
+  function getActiveCloudConfig() {
+    const binId = (cloudConfig && cloudConfig.binId && cloudConfig.binId.trim()) ? cloudConfig.binId.trim() : DEFAULT_BIN_ID;
+    const apiKey = (cloudConfig && cloudConfig.apiKey && cloudConfig.apiKey.trim()) ? cloudConfig.apiKey.trim() : DEFAULT_MASTER_KEY;
+    return { binId, apiKey };
+  }
+
   function loadLocalState() {
     try {
-      const rawCfg = localStorage.getItem(CLOUD_CFG_KEY);
-      if (rawCfg) cloudConfig = JSON.parse(rawCfg);
-    } catch (e) {}
+      const rawCfg = localStorage.getItem(CLOUD_CFG_KEY) || localStorage.getItem('serene_fib_vocab_cloud_cfg_v1');
+      if (rawCfg) {
+        const parsedCfg = JSON.parse(rawCfg);
+        cloudConfig = {
+          binId: (parsedCfg.binId && parsedCfg.binId.trim()) ? parsedCfg.binId.trim() : DEFAULT_BIN_ID,
+          apiKey: (parsedCfg.apiKey && parsedCfg.apiKey.trim()) ? parsedCfg.apiKey.trim() : DEFAULT_MASTER_KEY
+        };
+      } else {
+        cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
+      }
+    } catch (e) {
+      cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
+    }
 
     try {
-      const rawData = localStorage.getItem(LOCAL_DATA_KEY);
+      const rawData =
+        localStorage.getItem(LOCAL_DATA_KEY) ||
+        localStorage.getItem('serene_fib_vocab_data_v3') ||
+        localStorage.getItem('serene_fib_vocab_data_v2');
       if (rawData) {
         const parsed = JSON.parse(rawData);
         userData = { ...createDefaultUserData(), ...parsed, userName: FIXED_USER };
       }
     } catch (e) {}
 
-    document.getElementById('cloud-bin-id').value = cloudConfig.binId || '';
-    document.getElementById('cloud-api-key').value = cloudConfig.apiKey || '';
-    updateSyncBadge(cloudConfig.binId && cloudConfig.apiKey ? '☁️ 已啟用雲端同步' : '💾 本機儲存');
+    const activeCfg = getActiveCloudConfig();
+    document.getElementById('cloud-bin-id').value = activeCfg.binId;
+    document.getElementById('cloud-api-key').value = activeCfg.apiKey;
+    updateSyncBadge('☁️ 已啟用雲端同步');
   }
 
   function updateSyncBadge(text) {
@@ -705,34 +849,45 @@
   function saveState(syncCloud = true) {
     userData.updatedAt = Date.now();
     localStorage.setItem(LOCAL_DATA_KEY, JSON.stringify(userData));
-    if (syncCloud && cloudConfig.binId && cloudConfig.apiKey) {
+    if (syncCloud) {
       pushToCloud(false);
     }
   }
 
   function saveCloudConfigAndSync() {
-    const binId = document.getElementById('cloud-bin-id').value.trim();
-    const apiKey = document.getElementById('cloud-api-key').value.trim();
-    if (!binId || !apiKey) {
-      alert('請同時輸入 Cloud Bin ID 與 Cloud Master Key 喔！');
-      return;
-    }
-    cloudConfig = { binId, apiKey };
+    const rawBinId = document.getElementById('cloud-bin-id').value.trim();
+    const rawApiKey = document.getElementById('cloud-api-key').value.trim();
+    cloudConfig = {
+      binId: rawBinId || DEFAULT_BIN_ID,
+      apiKey: rawApiKey || DEFAULT_MASTER_KEY
+    };
+    document.getElementById('cloud-bin-id').value = cloudConfig.binId;
+    document.getElementById('cloud-api-key').value = cloudConfig.apiKey;
     localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudConfig));
     updateSyncBadge('☁️ 已啟用雲端同步');
     pullFromCloud(true);
   }
 
+  async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function pushToCloud(showNotice = false) {
-    if (!cloudConfig.binId || !cloudConfig.apiKey) return;
+    const { binId, apiKey } = getActiveCloudConfig();
     const msgEl = document.getElementById('cloud-sync-msg');
     try {
       updateSyncBadge('☁️ 上傳中...');
-      const res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(cloudConfig.binId)}`, {
+      const res = await fetchWithTimeout(`https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-Master-Key': cloudConfig.apiKey
+          'X-Master-Key': apiKey
         },
         body: JSON.stringify(userData)
       });
@@ -741,21 +896,22 @@
       if (showNotice && msgEl) msgEl.textContent = '✅ 已成功將 Serene 的資料上傳至雲端！';
     } catch (e) {
       updateSyncBadge('⚠️ 同步失敗');
-      if (showNotice && msgEl) msgEl.textContent = '⚠️ 上傳失敗，請檢查 Bin ID 與 Master Key 是否正確。';
+      if (showNotice && msgEl) {
+        msgEl.textContent = e.name === 'AbortError'
+          ? '⚠️ 上傳逾時（超過 8 秒無回應），請檢查網路或金鑰。'
+          : '⚠️ 上傳失敗，請檢查 Bin ID 與 Master Key 是否正確。';
+      }
     }
   }
 
   async function pullFromCloud(showNotice = false) {
-    if (!cloudConfig.binId || !cloudConfig.apiKey) {
-      if (showNotice) alert('尚未設定雲端同步金鑰，請先到「☁️ 跨裝置同步」分頁設定。');
-      return;
-    }
+    const { binId, apiKey } = getActiveCloudConfig();
     const msgEl = document.getElementById('cloud-sync-msg');
     try {
       updateSyncBadge('☁️ 下載中...');
-      const res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(cloudConfig.binId)}/latest`, {
+      const res = await fetchWithTimeout(`https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`, {
         headers: {
-          'X-Master-Key': cloudConfig.apiKey
+          'X-Master-Key': apiKey
         }
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -765,6 +921,9 @@
       if (remoteData && Array.isArray(remoteData.cards)) {
         if ((remoteData.updatedAt || 0) >= (userData.updatedAt || 0) || userData.cards.length === 0) {
           userData = { ...createDefaultUserData(), ...remoteData, userName: FIXED_USER };
+          if (!Array.isArray(userData.categories) || userData.categories.length === 0) {
+            userData.categories = [{ id: 'cat_default', name: '基礎單字' }];
+          }
           localStorage.setItem(LOCAL_DATA_KEY, JSON.stringify(userData));
           syncDailyRollover();
           refreshAllUI();
@@ -773,10 +932,18 @@
         }
         updateSyncBadge('☁️ 雲端已同步');
         if (showNotice && msgEl) msgEl.textContent = '✅ 已同步最新雲端資料（Serene）！';
+      } else {
+        await pushToCloud(false);
+        updateSyncBadge('☁️ 雲端已同步');
+        if (showNotice && msgEl) msgEl.textContent = '✅ 雲端尚未建立資料格式，已自動將本機資料初始化上傳！';
       }
     } catch (e) {
       updateSyncBadge('⚠️ 同步失敗');
-      if (showNotice && msgEl) msgEl.textContent = '⚠️ 雲端讀取失敗，請確認網路與金鑰設定。';
+      if (showNotice && msgEl) {
+        msgEl.textContent = e.name === 'AbortError'
+          ? '⚠️ 下載逾時（超過 8 秒無回應），請檢查網路連線或金鑰。'
+          : '⚠️ 雲端讀取失敗，請確認 Bin ID 與 Master Key 是否正確。';
+      }
     }
   }
 
@@ -785,16 +952,42 @@
     if (!userData.dailyLog || userData.dailyLog.date !== today) {
       userData.dailyLog = {
         date: today,
-        completedIds: []
+        completedIds: [],
+        failedTodayIds: [],
+        totalAttempts: 0,
+        correctAttempts: 0
       };
+      userData.cards.forEach(c => {
+        if (c.lockedDate && c.lockedDate !== today) {
+          delete c.lockedDate;
+        }
+      });
       saveState(true);
+    } else {
+      if (!Array.isArray(userData.dailyLog.completedIds)) userData.dailyLog.completedIds = [];
+      if (!Array.isArray(userData.dailyLog.failedTodayIds)) userData.dailyLog.failedTodayIds = [];
+      if (typeof userData.dailyLog.totalAttempts !== 'number') userData.dailyLog.totalAttempts = 0;
+      if (typeof userData.dailyLog.correctAttempts !== 'number') userData.dailyLog.correctAttempts = 0;
     }
+  }
+
+  function isCardLockedToday(card) {
+    const today = getLogicalDateStr();
+    return card.lockedDate === today || userData.dailyLog.failedTodayIds.includes(card.id);
+  }
+
+  function getTodayAccuracyInfo() {
+    syncDailyRollover();
+    const total = userData.dailyLog.totalAttempts || 0;
+    const correct = userData.dailyLog.correctAttempts || 0;
+    const pct = total > 0 ? Math.round((correct / total) * 100) : null;
+    return { total, correct, pct };
   }
 
   function getTodayCounts() {
     syncDailyRollover();
     const today = getLogicalDateStr();
-    const dueCards = userData.cards.filter(c => c.dueDate <= today);
+    const dueCards = userData.cards.filter(c => c.dueDate <= today || isCardLockedToday(c));
     const todoCount = dueCards.length;
     const validCompleted = userData.dailyLog.completedIds.filter(id =>
       userData.cards.some(c => c.id === id)
@@ -805,11 +998,17 @@
 
   function updateTopCounters() {
     const { doneCount, todoCount } = getTodayCounts();
+    const { pct } = getTodayAccuracyInfo();
+    const pctText = pct === null ? '--%' : `${pct}%`;
+
     document.getElementById('today-done-count').textContent = doneCount;
     document.getElementById('today-todo-count').textContent = todoCount;
+    document.getElementById('today-acc-rate').textContent = pctText;
+
     document.getElementById('stat-done-today').textContent = doneCount;
     document.getElementById('stat-todo-today').textContent = todoCount;
     document.getElementById('stat-total-cards').textContent = userData.cards.length;
+    document.getElementById('stat-acc-today').textContent = pctText;
   }
 
   function switchTab(tabName) {
@@ -820,7 +1019,7 @@
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).classList.add('active');
 
-    if (tabName === 'review') renderReviewCard();
+    if (tabName === 'review') renderReviewCard(false);
     if (tabName === 'categories') renderWordList();
     if (tabName === 'stats') renderStatsChart();
   }
@@ -832,6 +1031,7 @@
 
     const prevReviewVal = reviewFilter.value;
     const prevManageVal = manageCat.value;
+    const prevWordVal = wordCat.value;
 
     wordCat.innerHTML = '';
     manageCat.innerHTML = '';
@@ -849,6 +1049,9 @@
     }
     if ([...manageCat.options].some(o => o.value === prevManageVal)) {
       manageCat.value = prevManageVal;
+    }
+    if ([...wordCat.options].some(o => o.value === prevWordVal)) {
+      wordCat.value = prevWordVal;
     }
   }
 
@@ -869,9 +1072,38 @@
     renderWordList();
   }
 
+  // 刪除分類時連帶刪除該分類下的所有單字卡
+  function deleteSelectedCategory() {
+    const catId = document.getElementById('manage-cat-select').value;
+    const targetCat = userData.categories.find(c => c.id === catId);
+    if (!targetCat) return;
+
+    if (userData.categories.length <= 1) {
+      alert('至少需要保留 1 個分類喔！你可以先新增其他分類，再刪除此分類。');
+      return;
+    }
+
+    const cardsInCat = userData.cards.filter(c => c.categoryId === catId);
+    const confirmMsg = cardsInCat.length > 0
+      ? `確定要刪除「${targetCat.name}」分類嗎？\n⚠️ 此分類下的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原！`
+      : `確定要刪除空分類「${targetCat.name}」嗎？`;
+
+    if (!confirm(confirmMsg)) return;
+
+    const removedCardIds = new Set(cardsInCat.map(c => c.id));
+    userData.categories = userData.categories.filter(c => c.id !== catId);
+    userData.cards = userData.cards.filter(c => c.categoryId !== catId);
+    userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => !removedCardIds.has(id));
+    userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => !removedCardIds.has(id));
+
+    saveState(true);
+    refreshAllUI();
+    alert(`🗑️ 已刪除分類「${targetCat.name}」及其底下 ${cardsInCat.length} 張單字卡。`);
+  }
+
   function addWordCard() {
     const categoryId = document.getElementById('word-category').value;
-    const type = document.getElementById('word-type').value;
+    const selectedType = document.getElementById('word-type').value;
     const en = document.getElementById('word-en').value.trim();
     const pos = document.getElementById('word-pos').value;
     const zh = document.getElementById('word-zh').value.trim();
@@ -885,23 +1117,28 @@
       return;
     }
 
+    const typesToCreate = selectedType === 'BOTH' ? ['1', '2'] : [selectedType];
     const catCards = userData.cards.filter(c => c.categoryId === categoryId);
-    if (catCards.length >= MAX_CARDS_PER_CATEGORY) {
-      alert(`這個分類已經達到 ${MAX_CARDS_PER_CATEGORY} 個單字上限囉！`);
+    if (catCards.length + typesToCreate.length > MAX_CARDS_PER_CATEGORY) {
+      alert(`這個分類即將超過 ${MAX_CARDS_PER_CATEGORY} 個單字上限囉！`);
       return;
     }
 
     const today = getLogicalDateStr();
-    userData.cards.push({
-      id: 'card_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      categoryId,
-      type,
-      en,
-      pos,
-      zh,
-      fibIndex: 0,
-      dueDate: today,
-      createdAt: today
+    typesToCreate.forEach((t, idx) => {
+      userData.cards.push({
+        id: 'card_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 6),
+        categoryId,
+        type: t,
+        en,
+        pos,
+        zh,
+        fibIndex: 0,
+        shownCount: 0,
+        wrongCount: 0,
+        dueDate: today,
+        createdAt: today
+      });
     });
 
     saveState(true);
@@ -909,15 +1146,41 @@
     document.getElementById('word-zh').value = '';
     setPreviewHint('');
     refreshAllUI();
-    alert(`🎉 成功加入「${en}」！已列入今日狀態 0 複習清單。`);
+
+    if (selectedType === 'BOTH') {
+      alert(`🎉 成功同時加入「${en}」的型態一與型態二共 2 張單字卡！已列入今日狀態 0 複習清單。`);
+    } else {
+      alert(`🎉 成功加入「${en}」！已列入今日狀態 0 複習清單。`);
+    }
+  }
+
+  function removeCardById(cardId, askConfirm = true) {
+    const card = userData.cards.find(c => c.id === cardId);
+    if (!card) return false;
+    if (askConfirm && !confirm(`確定要刪除單字卡「${card.en}」嗎？`)) {
+      return false;
+    }
+    userData.cards = userData.cards.filter(c => c.id !== cardId);
+    userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
+    userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== cardId);
+    if (lastShownCardId === cardId) lastShownCardId = null;
+    saveState(true);
+    refreshAllUI();
+    return true;
   }
 
   function deleteCard(cardId) {
-    if (!confirm('確定要刪除這張單字卡嗎？')) return;
-    userData.cards = userData.cards.filter(c => c.id !== cardId);
-    userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
-    saveState(true);
-    refreshAllUI();
+    removeCardById(cardId, true);
+  }
+
+  function deleteCurrentReviewCardNow() {
+    if (!currentReviewCardId) return;
+    const card = userData.cards.find(c => c.id === currentReviewCardId);
+    if (!card) return;
+    if (!confirm(`「太簡單了!刪掉!」\n確定要立刻刪除這張單字卡（${card.en} — ${card.zh}）嗎？`)) {
+      return;
+    }
+    removeCardById(currentReviewCardId, false);
   }
 
   function escapeHtml(str) {
@@ -946,6 +1209,7 @@
       const item = document.createElement('div');
       item.className = `word-list-item ${c.type === '2' ? 'type2' : ''}`;
 
+      const stats = normalizeCardStats(c);
       const leftDiv = document.createElement('div');
       const titleDiv = document.createElement('div');
       titleDiv.style.cssText = 'font-size:1.15rem; font-weight:700;';
@@ -958,9 +1222,10 @@
       speakBtn.onclick = () => speakEnglish(c.en);
       titleDiv.appendChild(speakBtn);
 
+      const lockedNote = isCardLockedToday(c) ? ' ｜ 🔒 今日首答失誤(輪流複習中)' : '';
       const metaDiv = document.createElement('div');
       metaDiv.style.cssText = 'font-size:0.85rem; color:var(--text-light); margin-top:4px;';
-      metaDiv.innerHTML = `${c.type === '1' ? '📝 型態一(中文拼英文)' : '🎧 型態二(聽音寫英中)'} ｜ <span class="fib-pill">費氏階段 #${c.fibIndex} (間隔 ${FIB_SEQUENCE[c.fibIndex] ?? 377} 天)</span> ｜ 下次複習：${c.dueDate}`;
+      metaDiv.innerHTML = `${c.type === '1' ? '📝 型態一(中文拼英文)' : '🎧 型態二(聽音寫英中)'} ｜ <span class="fib-pill">費氏階段 #${c.fibIndex} (間隔 ${FIB_SEQUENCE[c.fibIndex] ?? 377} 天)</span> ｜ 出現 ${stats.shownCount} 次 / 錯 ${stats.wrongCount} 次 (${stats.wrongRate}%) ｜ 下次複習：${c.dueDate}${lockedNote}`;
 
       leftDiv.appendChild(titleDiv);
       leftDiv.appendChild(metaDiv);
@@ -976,8 +1241,27 @@
     });
   }
 
-  function renderReviewCard() {
+  function pickNextReviewCard(filteredCards) {
+    if (!filteredCards.length) return null;
+    if (filteredCards.length === 1) return filteredCards[0];
+
+    const unlocked = filteredCards.filter(c => !isCardLockedToday(c));
+    if (unlocked.length > 0) {
+      const nextUnlocked = unlocked.find(c => c.id !== lastShownCardId) || unlocked[0];
+      return nextUnlocked;
+    }
+
+    const lastIdx = filteredCards.findIndex(c => c.id === lastShownCardId);
+    if (lastIdx >= 0) {
+      return filteredCards[(lastIdx + 1) % filteredCards.length];
+    }
+    return filteredCards[0];
+  }
+
+  function renderReviewCard(resetRotation = false) {
     awaitingNext = false;
+    if (resetRotation) lastShownCardId = null;
+
     const { dueCards } = getTodayCounts();
     const filterCat = document.getElementById('review-cat-filter').value;
     const filtered = filterCat === 'ALL'
@@ -998,9 +1282,37 @@
       return;
     }
 
-    const card = filtered[0];
+    const card = pickNextReviewCard(filtered);
     currentReviewCardId = card.id;
+    lastShownCardId = card.id;
+
+    // 每次向使用者問這張單字卡時，累加出現次數
+    card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
+    saveState(true);
+
+    const stats = normalizeCardStats(card);
     const catName = userData.categories.find(c => c.id === card.categoryId)?.name || '未分類';
+    const lockedToday = isCardLockedToday(card);
+
+    const headerMetaHtml = `
+      <div class="card-meta-bar">
+        <span class="card-tag">📁 ${escapeHtml(catName)} ｜ 費氏階段 #${card.fibIndex}</span>
+        <span class="diff-badge ${stats.badgeClass}">${escapeHtml(stats.badgeText)}</span>
+      </div>
+      <div class="card-stats-strip">
+        <span>👀 出現次數：${stats.shownCount}</span>
+        <span>❌ 答錯次數：${stats.wrongCount}</span>
+        <span>📉 答錯率：${stats.wrongRate}%</span>
+      </div>
+      ${lockedToday ? `<div class="locked-tag">🔁 今日未完成單字（輪流複習池｜狀態保持 0，明天 06:00 後答對才晉級）</div>` : ''}
+    `;
+
+    const actionButtonsHtml = (submitBtnClass) => `
+      <div class="review-actions-row">
+        <button id="submit-ans-btn" class="btn ${submitBtnClass}" style="width:100%;" onclick="submitAnswer()">✨ 送出答案</button>
+        <button type="button" class="btn btn-yellow btn-sm" style="width:100%;" onclick="deleteCurrentReviewCardNow()">太簡單了!刪掉!</button>
+      </div>
+    `;
 
     if (card.type === '1') {
       const slotsHtml = card.en.split('').map(ch => {
@@ -1010,7 +1322,7 @@
 
       container.innerHTML = `
         <div class="review-card">
-          <div class="card-tag">📁 ${escapeHtml(catName)} ｜ 費氏階段 #${card.fibIndex}</div>
+          ${headerMetaHtml}
           <div class="prompt-chinese">${escapeHtml(card.zh)}</div>
           <div class="prompt-pos">詞性：${escapeHtml(card.pos)}</div>
           <div style="font-size:0.95rem; color:var(--text-light);">請填入英文單字（共 ${card.en.replace(/\s/g, '').length} 個字母）：</div>
@@ -1019,7 +1331,7 @@
             <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
               placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer()" />
           </div>
-          <button id="submit-ans-btn" class="btn btn-primary" style="width:100%; max-width:360px;" onclick="submitAnswer()">✨ 送出答案</button>
+          ${actionButtonsHtml('btn-primary')}
           <div id="review-feedback" class="feedback-banner"></div>
         </div>
       `;
@@ -1027,7 +1339,7 @@
     } else {
       container.innerHTML = `
         <div class="review-card" style="border-color: var(--accent-pink);">
-          <div class="card-tag" style="background:var(--accent-pink);">📁 ${escapeHtml(catName)} ｜ 費氏階段 #${card.fibIndex}</div>
+          ${headerMetaHtml}
           <div style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-top:6px;">🎧 聽發音，寫出英文和中文！</div>
           <button id="review-play-audio-btn" class="audio-btn-big" type="button">🔊</button>
           <div style="font-size:0.9rem; color:var(--text-light); margin-bottom:16px;">（點擊喇叭可以再聽一次喔）</div>
@@ -1040,7 +1352,7 @@
             <label>中文意思：</label>
             <input type="text" id="ans-zh-input" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer()" />
           </div>
-          <button id="submit-ans-btn" class="btn btn-pink" style="width:100%; max-width:380px;" onclick="submitAnswer()">✨ 送出答案</button>
+          ${actionButtonsHtml('btn-pink')}
           <div id="review-feedback" class="feedback-banner"></div>
         </div>
       `;
@@ -1051,59 +1363,134 @@
 
   function syncLetterSlots(val) {
     const slots = document.querySelectorAll('#letter-slots-box .letter-slot:not(.space)');
-    const cleanChars = val.replace(/\s/g, '').split('');
+    const cleanChars = val.replace(/\s+/g, '').split('');
     slots.forEach((slot, idx) => {
       slot.textContent = cleanChars[idx] || '';
     });
   }
 
+  function forceLearnCard(cardId) {
+    const card = userData.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    const today = getLogicalDateStr();
+    const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
+    const intervalDays = FIB_SEQUENCE[nextIndex];
+
+    card.fibIndex = nextIndex;
+    card.dueDate = addDaysToLogicalDate(today, intervalDays);
+    delete card.lockedDate;
+
+    userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== card.id);
+    if (!userData.dailyLog.completedIds.includes(card.id)) {
+      userData.dailyLog.completedIds.push(card.id);
+    }
+
+    saveState(true);
+    updateTopCounters();
+
+    const feedbackEl = document.getElementById('review-feedback');
+    if (feedbackEl) {
+      feedbackEl.className = 'feedback-banner feedback-correct';
+      feedbackEl.innerHTML = `🌟 已手動標記為「真的學會了」！<br>列入今日已完成單字，狀態推進至階段 #${card.fibIndex}（${intervalDays} 天後 ${card.dueDate} 再複習）`;
+    }
+  }
+
   function submitAnswer() {
     if (awaitingNext) {
-      renderReviewCard();
+      renderReviewCard(false);
       return;
     }
     const card = userData.cards.find(c => c.id === currentReviewCardId);
     if (!card) return;
 
-    const enAns = document.getElementById('ans-en-input').value.trim().toLowerCase();
-    const targetEn = card.en.trim().toLowerCase();
+    syncDailyRollover();
+    const today = getLogicalDateStr();
+
+    const enAns = normalizeCompareStr(document.getElementById('ans-en-input').value);
+    const targetEn = normalizeCompareStr(card.en);
 
     let isCorrect = false;
     if (card.type === '1') {
-      isCorrect = (enAns === targetEn);
+      isCorrect = (enAns.length > 0 && enAns === targetEn);
     } else {
-      const zhAns = document.getElementById('ans-zh-input').value.trim();
-      const validZhList = card.zh.split(/[,，/、;；]/).map(s => s.trim()).filter(Boolean);
-      const zhMatch = zhAns.length > 0 && (zhAns === card.zh.trim() || validZhList.includes(zhAns));
-      isCorrect = (enAns === targetEn) && zhMatch;
+      const zhAns = normalizeCompareStr(document.getElementById('ans-zh-input').value);
+      const targetZhFull = normalizeCompareStr(card.zh);
+      const validZhList = card.zh
+        .split(/[,，/、;；]/)
+        .map(s => normalizeCompareStr(s))
+        .filter(Boolean);
+      const zhMatch = zhAns.length > 0 && (zhAns === targetZhFull || validZhList.includes(zhAns));
+      isCorrect = (enAns.length > 0 && enAns === targetEn) && zhMatch;
     }
 
-    const today = getLogicalDateStr();
+    userData.dailyLog.totalAttempts = (userData.dailyLog.totalAttempts || 0) + 1;
+    if (isCorrect) {
+      userData.dailyLog.correctAttempts = (userData.dailyLog.correctAttempts || 0) + 1;
+    } else {
+      card.wrongCount = (typeof card.wrongCount === 'number' ? card.wrongCount : 0) + 1;
+    }
+
+    const { total, correct, pct } = getTodayAccuracyInfo();
+    const accSummaryHtml = `<div style="margin-top:8px; font-size:0.95rem; color:#1565C0;">📊 今日目前答對率：<b>${pct}%</b>（${correct} / ${total} 題）</div>`;
+
     const feedbackEl = document.getElementById('review-feedback');
     const btnEl = document.getElementById('submit-ans-btn');
+    const wasLockedToday = isCardLockedToday(card);
 
     if (isCorrect) {
-      const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
-      const intervalDays = FIB_SEQUENCE[nextIndex];
-      card.fibIndex = nextIndex;
-      card.dueDate = addDaysToLogicalDate(today, intervalDays);
-
-      if (!userData.dailyLog.completedIds.includes(card.id)) {
-        userData.dailyLog.completedIds.push(card.id);
-      }
-
       speakEnglish(card.en);
-      feedbackEl.className = 'feedback-banner feedback-correct';
-      feedbackEl.innerHTML = `🎉 答對了！太厲害了！<br><small>下次複習時間：${intervalDays} 天後 (${card.dueDate})</small>`;
-      feedbackEl.style.display = 'block';
+
+      if (!wasLockedToday) {
+        const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
+        const intervalDays = FIB_SEQUENCE[nextIndex];
+        card.fibIndex = nextIndex;
+        card.dueDate = addDaysToLogicalDate(today, intervalDays);
+
+        if (!userData.dailyLog.completedIds.includes(card.id)) {
+          userData.dailyLog.completedIds.push(card.id);
+        }
+
+        feedbackEl.className = 'feedback-banner feedback-correct';
+        feedbackEl.innerHTML = `
+          🎉 第一次就答對了！太厲害了！<br>
+          <small>已列入今日已完成，狀態推進至階段 #${card.fibIndex}（${intervalDays} 天後 ${card.dueDate} 再複習）</small>
+          ${accSummaryHtml}
+        `;
+        feedbackEl.style.display = 'block';
+      } else {
+        card.fibIndex = 0;
+        card.dueDate = today;
+
+        feedbackEl.className = 'feedback-banner feedback-locked-pass';
+        feedbackEl.innerHTML = `
+          ✅ 這次答對了！<br>
+          <small>因為今天第一次作答未答對，此單字目前仍留在「今日未完成」（狀態 0），將於明天早上 6:00 後答對才自動晉級。</small>
+          <div style="margin-top:12px;">
+            <button type="button" class="btn btn-green btn-sm" onclick="forceLearnCard('${card.id}')">🌟 真的學會了（強制列入今日完成並進下一狀態）</button>
+          </div>
+          ${accSummaryHtml}
+        `;
+        feedbackEl.style.display = 'block';
+      }
     } else {
       card.fibIndex = 0;
       card.dueDate = today;
+      card.lockedDate = today;
+
       userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== card.id);
+      if (!userData.dailyLog.failedTodayIds.includes(card.id)) {
+        userData.dailyLog.failedTodayIds.push(card.id);
+      }
 
       speakEnglish(card.en);
       feedbackEl.className = 'feedback-banner feedback-wrong';
-      feedbackEl.innerHTML = `💪 加油！差一點點！<br>正確答案：<b>${escapeHtml(card.en)}</b> (${escapeHtml(card.pos)}) — <b>${escapeHtml(card.zh)}</b><br><small>此單字已重設為階段 0，稍後再挑戰一次！</small>`;
+      feedbackEl.innerHTML = `
+        💪 加油！差一點點！<br>
+        正確答案：<b>${escapeHtml(card.en)}</b> (${escapeHtml(card.pos)}) — <b>${escapeHtml(card.zh)}</b><br>
+        <small>此單字狀態設為 0 並列入今日未完成，稍後會繼續在未完成清單中輪流出現複習！</small>
+        ${accSummaryHtml}
+      `;
       feedbackEl.style.display = 'block';
     }
 
@@ -1174,7 +1561,7 @@
   function refreshAllUI() {
     populateCategorySelects();
     updateTopCounters();
-    renderReviewCard();
+    renderReviewCard(false);
     renderWordList();
   }
 
@@ -1182,9 +1569,7 @@
     loadLocalState();
     syncDailyRollover();
     refreshAllUI();
-    if (cloudConfig.binId && cloudConfig.apiKey) {
-      await pullFromCloud(false);
-    }
+    await pullFromCloud(false);
   });
 </script>
 </body>
