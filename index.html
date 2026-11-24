@@ -157,6 +157,12 @@
       border: 2px solid #FFB74D;
     }
 
+    .badge-rem {
+      background: #F3E5F5;
+      color: #6A1B9A;
+      border: 2px solid #CE93D8;
+    }
+
     .badge-acc {
       background: #E3F2FD;
       color: #1565C0;
@@ -366,6 +372,29 @@
       margin: 0 auto;
     }
 
+    .subtle-toy-delete {
+      margin-top: 14px;
+      background: transparent;
+      border: 1px dashed #CFD8DC;
+      color: #90A4AE;
+      font-size: 0.82rem;
+      padding: 5px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.72;
+      transition: 0.2s;
+    }
+
+    .subtle-toy-delete:hover {
+      opacity: 1;
+      color: #546E7A;
+      border-color: #90A4AE;
+      background: #FAFAFA;
+    }
+
     .feedback-banner {
       margin-top: 18px;
       padding: 16px;
@@ -491,6 +520,7 @@
       <div class="status-badges">
         <div class="badge badge-done">✅ 今日已完成：<span id="today-done-count">0</span></div>
         <div class="badge badge-todo">🔥 今日未完成：<span id="today-todo-count">0</span></div>
+        <div class="badge badge-rem">⏳ 今日剩餘題數：<span id="today-rem-count">0</span></div>
         <div class="badge badge-acc">🎯 今日答對率：<span id="today-acc-rate">--%</span></div>
       </div>
     </div>
@@ -590,8 +620,12 @@
           <div class="num" style="color:#1B5E20;" id="stat-done-today">0</div>
         </div>
         <div class="stat-box" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">
-          <h3 style="color:#EF6C00;">🔥 今日待完成</h3>
+          <h3 style="color:#EF6C00;">🔥 今日未完成</h3>
           <div class="num" style="color:#E65100;" id="stat-todo-today">0</div>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #F3E5F5, #E1BEE7);">
+          <h3 style="color:#6A1B9A;">⏳ 今日剩餘題數</h3>
+          <div class="num" style="color:#4A148C;" id="stat-rem-today">0</div>
         </div>
         <div class="stat-box" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB);">
           <h3 style="color:#1565C0;">🎯 今日答對率</h3>
@@ -636,7 +670,8 @@
   const FIXED_USER = 'Serene';
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
   const MAX_CARDS_PER_CATEGORY = 1000;
-  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v4';
+  const EASY_DELETE_PASSCODE = '0000';
+  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v5';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
 
   const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
@@ -661,6 +696,7 @@
         date: getLogicalDateStr(),
         completedIds: [],
         failedTodayIds: [],
+        answeredTodayIds: [],
         totalAttempts: 0,
         correctAttempts: 0
       }
@@ -827,6 +863,7 @@
     try {
       const rawData =
         localStorage.getItem(LOCAL_DATA_KEY) ||
+        localStorage.getItem('serene_fib_vocab_data_v4') ||
         localStorage.getItem('serene_fib_vocab_data_v3') ||
         localStorage.getItem('serene_fib_vocab_data_v2');
       if (rawData) {
@@ -954,6 +991,7 @@
         date: today,
         completedIds: [],
         failedTodayIds: [],
+        answeredTodayIds: [],
         totalAttempts: 0,
         correctAttempts: 0
       };
@@ -966,6 +1004,11 @@
     } else {
       if (!Array.isArray(userData.dailyLog.completedIds)) userData.dailyLog.completedIds = [];
       if (!Array.isArray(userData.dailyLog.failedTodayIds)) userData.dailyLog.failedTodayIds = [];
+      if (!Array.isArray(userData.dailyLog.answeredTodayIds)) {
+        // 向下相容：若舊資料無 answeredTodayIds，將今天已完成或失誤的卡片納入
+        const seed = new Set([...userData.dailyLog.completedIds, ...userData.dailyLog.failedTodayIds]);
+        userData.dailyLog.answeredTodayIds = [...seed];
+      }
       if (typeof userData.dailyLog.totalAttempts !== 'number') userData.dailyLog.totalAttempts = 0;
       if (typeof userData.dailyLog.correctAttempts !== 'number') userData.dailyLog.correctAttempts = 0;
     }
@@ -976,6 +1019,10 @@
     return card.lockedDate === today || userData.dailyLog.failedTodayIds.includes(card.id);
   }
 
+  function hasCardBeenAnsweredToday(cardId) {
+    return Array.isArray(userData.dailyLog.answeredTodayIds) && userData.dailyLog.answeredTodayIds.includes(cardId);
+  }
+
   function getTodayAccuracyInfo() {
     syncDailyRollover();
     const total = userData.dailyLog.totalAttempts || 0;
@@ -984,29 +1031,39 @@
     return { total, correct, pct };
   }
 
+  // 今日剩餘題數 = 每日早上 6:00 起需增加/複習的字卡 + 今天新增的新字卡 - 今天已經回答過的字卡
   function getTodayCounts() {
     syncDailyRollover();
     const today = getLogicalDateStr();
+
+    const scheduledOrNewTodayCards = userData.cards.filter(c =>
+      c.dueDate <= today || c.createdAt === today || isCardLockedToday(c)
+    );
+    const answeredTodayCount = scheduledOrNewTodayCards.filter(c => hasCardBeenAnsweredToday(c.id)).length;
+    const remainingCount = Math.max(0, scheduledOrNewTodayCards.length - answeredTodayCount);
+
     const dueCards = userData.cards.filter(c => c.dueDate <= today || isCardLockedToday(c));
     const todoCount = dueCards.length;
     const validCompleted = userData.dailyLog.completedIds.filter(id =>
       userData.cards.some(c => c.id === id)
     );
     const doneCount = validCompleted.length;
-    return { doneCount, todoCount, dueCards };
+    return { doneCount, todoCount, remainingCount, dueCards };
   }
 
   function updateTopCounters() {
-    const { doneCount, todoCount } = getTodayCounts();
+    const { doneCount, todoCount, remainingCount } = getTodayCounts();
     const { pct } = getTodayAccuracyInfo();
     const pctText = pct === null ? '--%' : `${pct}%`;
 
     document.getElementById('today-done-count').textContent = doneCount;
     document.getElementById('today-todo-count').textContent = todoCount;
+    document.getElementById('today-rem-count').textContent = remainingCount;
     document.getElementById('today-acc-rate').textContent = pctText;
 
     document.getElementById('stat-done-today').textContent = doneCount;
     document.getElementById('stat-todo-today').textContent = todoCount;
+    document.getElementById('stat-rem-today').textContent = remainingCount;
     document.getElementById('stat-total-cards').textContent = userData.cards.length;
     document.getElementById('stat-acc-today').textContent = pctText;
   }
@@ -1072,7 +1129,6 @@
     renderWordList();
   }
 
-  // 刪除分類時連帶刪除該分類下的所有單字卡
   function deleteSelectedCategory() {
     const catId = document.getElementById('manage-cat-select').value;
     const targetCat = userData.categories.find(c => c.id === catId);
@@ -1085,7 +1141,7 @@
 
     const cardsInCat = userData.cards.filter(c => c.categoryId === catId);
     const confirmMsg = cardsInCat.length > 0
-      ? `確定要刪除「${targetCat.name}」分類嗎？\n⚠️ 此分類下的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原！`
+      ? `確定要刪除「${targetCat.name}」分類嗎？\n⚠️ 此分類內的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原！`
       : `確定要刪除空分類「${targetCat.name}」嗎？`;
 
     if (!confirm(confirmMsg)) return;
@@ -1095,6 +1151,7 @@
     userData.cards = userData.cards.filter(c => c.categoryId !== catId);
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => !removedCardIds.has(id));
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => !removedCardIds.has(id));
+    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => !removedCardIds.has(id));
 
     saveState(true);
     refreshAllUI();
@@ -1163,6 +1220,7 @@
     userData.cards = userData.cards.filter(c => c.id !== cardId);
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== cardId);
+    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => id !== cardId);
     if (lastShownCardId === cardId) lastShownCardId = null;
     saveState(true);
     refreshAllUI();
@@ -1173,13 +1231,19 @@
     removeCardById(cardId, true);
   }
 
-  function deleteCurrentReviewCardNow() {
+  // 低調趣味刪除入口：需輸入密碼 0000 才允許刪除
+  function deleteCurrentReviewCardWithPasscode() {
     if (!currentReviewCardId) return;
     const card = userData.cards.find(c => c.id === currentReviewCardId);
     if (!card) return;
-    if (!confirm(`「太簡單了!刪掉!」\n確定要立刻刪除這張單字卡（${card.en} — ${card.zh}）嗎？`)) {
+
+    const inputCode = prompt('🎈🔍 發現超簡單單字想刪掉嗎？\n請輸入家長密碼（4位數）確認刪除：');
+    if (inputCode === null) return;
+    if (inputCode.trim() !== EASY_DELETE_PASSCODE) {
+      alert('密碼不正確喔！只有輸入正確密碼才能刪除單字卡。');
       return;
     }
+
     removeCardById(currentReviewCardId, false);
   }
 
@@ -1241,21 +1305,31 @@
     });
   }
 
+  // 出題順序：先考型態二（聽音寫英中），全部都回答過後再考型態一（看中文拼英文）；最後在今日未完成池輪流
   function pickNextReviewCard(filteredCards) {
     if (!filteredCards.length) return null;
     if (filteredCards.length === 1) return filteredCards[0];
 
-    const unlocked = filteredCards.filter(c => !isCardLockedToday(c));
-    if (unlocked.length > 0) {
-      const nextUnlocked = unlocked.find(c => c.id !== lastShownCardId) || unlocked[0];
-      return nextUnlocked;
+    const unansweredType2 = filteredCards.filter(c => c.type === '2' && !hasCardBeenAnsweredToday(c.id));
+    if (unansweredType2.length > 0) {
+      return unansweredType2.find(c => c.id !== lastShownCardId) || unansweredType2[0];
     }
 
-    const lastIdx = filteredCards.findIndex(c => c.id === lastShownCardId);
-    if (lastIdx >= 0) {
-      return filteredCards[(lastIdx + 1) % filteredCards.length];
+    const unansweredType1 = filteredCards.filter(c => c.type === '1' && !hasCardBeenAnsweredToday(c.id));
+    if (unansweredType1.length > 0) {
+      return unansweredType1.find(c => c.id !== lastShownCardId) || unansweredType1[0];
     }
-    return filteredCards[0];
+
+    // 全部題目都已回答過一輪，依序在今日未完成字卡內輪流複習（先型態二再型態一）
+    const orderedPool = [
+      ...filteredCards.filter(c => c.type === '2'),
+      ...filteredCards.filter(c => c.type === '1')
+    ];
+    const lastIdx = orderedPool.findIndex(c => c.id === lastShownCardId);
+    if (lastIdx >= 0) {
+      return orderedPool[(lastIdx + 1) % orderedPool.length];
+    }
+    return orderedPool[0];
   }
 
   function renderReviewCard(resetRotation = false) {
@@ -1286,7 +1360,6 @@
     currentReviewCardId = card.id;
     lastShownCardId = card.id;
 
-    // 每次向使用者問這張單字卡時，累加出現次數
     card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
     saveState(true);
 
@@ -1310,7 +1383,9 @@
     const actionButtonsHtml = (submitBtnClass) => `
       <div class="review-actions-row">
         <button id="submit-ans-btn" class="btn ${submitBtnClass}" style="width:100%;" onclick="submitAnswer()">✨ 送出答案</button>
-        <button type="button" class="btn btn-yellow btn-sm" style="width:100%;" onclick="deleteCurrentReviewCardNow()">太簡單了!刪掉!</button>
+      </div>
+      <div>
+        <button type="button" class="subtle-toy-delete" onclick="deleteCurrentReviewCardWithPasscode()">🎈🔍 太簡單了!刪掉!</button>
       </div>
     `;
 
@@ -1385,6 +1460,9 @@
     if (!userData.dailyLog.completedIds.includes(card.id)) {
       userData.dailyLog.completedIds.push(card.id);
     }
+    if (!userData.dailyLog.answeredTodayIds.includes(card.id)) {
+      userData.dailyLog.answeredTodayIds.push(card.id);
+    }
 
     saveState(true);
     updateTopCounters();
@@ -1422,6 +1500,11 @@
         .filter(Boolean);
       const zhMatch = zhAns.length > 0 && (zhAns === targetZhFull || validZhList.includes(zhAns));
       isCorrect = (enAns.length > 0 && enAns === targetEn) && zhMatch;
+    }
+
+    // 記錄此單字卡在今天已經回答過
+    if (!userData.dailyLog.answeredTodayIds.includes(card.id)) {
+      userData.dailyLog.answeredTodayIds.push(card.id);
     }
 
     userData.dailyLog.totalAttempts = (userData.dailyLog.totalAttempts || 0) + 1;
