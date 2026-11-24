@@ -1230,7 +1230,7 @@
     if (doneCount <= 0) {
       return '--%';
     }
-    const rate = Math.round((todoCount / doneCount) * 100);
+    const rate = Math.round((doneCount / (doneCount+todoCount)) * 100);
     return `${rate}%`;
   }
 
