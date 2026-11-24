@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>🌟 Serene 單字王（發音診斷測試版）🌟</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-card: #FFFFFF;
+      --primary: #FF7043;
+      --primary-dark: #F4511E;
+      --secondary: #26C6DA;
+      --accent-yellow: #FFCA28;
+      --accent-green: #66BB6A;
+      --accent-pink: #EC407A;
+      --accent-purple: #AB47BC;
+      --text-main: #37474F;
+      --text-light: #78909C;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --shadow: 0 8px 20px rgba(0, 150, 136, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #FFF9C4 0%, #E1F5FE 50%, #F8BBD0 100%);
+      min-height: 100vh;
+      color: var(--text-main);
+    }
+
+    input[type="text"], input[type="password"], select {
+      width: 100%;
+      padding: 13px 16px;
+      border: 3px solid #B2EBF2;
+      border-radius: var(--radius-md);
+      font-size: 1.05rem;
+      outline: none;
+      transition: 0.2s;
+      background: #FAFAFA;
+      color: var(--text-main);
+    }
+
+    input[type="text"]:focus, input[type="password"]:focus, select:focus {
+      border-color: var(--secondary);
+      background: #FFFFFF;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 20px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 1.02rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+      color: white;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+    }
+
+    .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+    }
+
+    .btn-primary { background: var(--primary); }
+    .btn-secondary { background: var(--secondary); }
+    .btn-green { background: var(--accent-green); }
+    .btn-pink { background: var(--accent-pink); }
+    .btn-purple { background: var(--accent-purple); }
+    .btn-yellow { background: var(--accent-yellow); color: #4E342E; }
+    .btn-sm { padding: 8px 14px; font-size: 0.92rem; border-radius: 12px; }
+
+    #app-screen {
+      display: block;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: 70px;
+    }
+
+    .top-bar {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 14px 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      border: 3px solid var(--secondary);
+      position: sticky;
+      top: 10px;
+      z-index: 100;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+
+    .sync-pill {
+      font-size: 0.85rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: #E0F7FA;
+      color: #006064;
+      font-weight: 700;
+    }
+
+    .status-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-done {
+      background: #E8F5E9;
+      color: #2E7D32;
+      border: 2px solid #81C784;
+    }
+
+    .badge-todo {
+      background: #FFF3E0;
+      color: #E65100;
+      border: 2px solid #FFB74D;
+    }
+
+    .nav-tabs {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .nav-tab {
+      background: rgba(255, 255, 255, 0.85);
+      border: 3px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 12px 6px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .nav-tab.active {
+      background: var(--bg-card);
+      border-color: var(--primary);
+      color: var(--primary);
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+
+    .tab-panel {
+      display: none;
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 3px solid #FFF;
+    }
+
+    .tab-panel.active {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .review-card {
+      background: linear-gradient(180deg, #FFFDE7 0%, #FFFFFF 100%);
+      border: 4px dashed var(--accent-yellow);
+      border-radius: var(--radius-lg);
+      padding: 30px 20px;
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card-tag {
+      display: inline-block;
+      background: var(--accent-purple);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .prompt-chinese {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--text-main);
+      margin: 10px 0;
+    }
+
+    .prompt-pos {
+      display: inline-block;
+      background: #E0F2F1;
+      color: #00695C;
+      padding: 4px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 18px;
+    }
+
+    .letter-slots {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 20px 0;
+      min-height: 48px;
+    }
+
+    .letter-slot {
+      width: 34px;
+      height: 44px;
+      border-bottom: 4px solid var(--primary);
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: lowercase;
+    }
+
+    .letter-slot.space {
+      border-bottom: none;
+      width: 18px;
+    }
+
+    .audio-btn-big {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: var(--secondary);
+      color: white;
+      border: 5px solid #B2EBF2;
+      font-size: 2.5rem;
+      cursor: pointer;
+      box-shadow: 0 6px 15px rgba(38, 198, 218, 0.4);
+      margin: 10px auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s;
+    }
+
+    .audio-btn-big:active {
+      transform: scale(0.92);
+    }
+
+    .speech-status-hint {
+      font-size: 0.92rem;
+      color: #00838F;
+      margin-top: 6px;
+      min-height: 20px;
+      font-weight: 700;
+    }
+
+    .diag-box {
+      background: #FFF8E1;
+      border: 2px solid #FFB300;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-top: 14px;
+      margin-bottom: 18px;
+    }
+
+    .diag-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .diag-log {
+      margin-top: 12px;
+      background: #263238;
+      color: #ECEFF1;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .feedback-banner {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: none;
+    }
+
+    .feedback-correct {
+      background: #E8F5E9;
+      color: #2E7D32;
+      border: 2px solid #66BB6A;
+    }
+
+    .feedback-wrong {
+      background: #FFEBEE;
+      color: #C62828;
+      border: 2px solid #EF5350;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 720px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .nav-tabs { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text-main);
+    }
+
+    .word-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #F5F7FA;
+      border-radius: var(--radius-md);
+      margin-bottom: 10px;
+      border-left: 6px solid var(--secondary);
+      gap: 10px;
+    }
+
+    .word-list-item.type2 {
+      border-left-color: var(--accent-pink);
+    }
+
+    .fib-pill {
+      background: var(--accent-yellow);
+      color: #4E342E;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .stat-summary {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .stat-box {
+      flex: 1;
+      min-width: 150px;
+      background: linear-gradient(135deg, #E1F5FE, #B3E5FC);
+      padding: 18px;
+      border-radius: var(--radius-md);
+      text-align: center;
+    }
+
+    .stat-box h3 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+      color: #0277BD;
+    }
+
+    .stat-box .num {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: #01579B;
+    }
+
+    .sync-box {
+      background: #F1F8E9;
+      border: 2px dashed #8BC34A;
+      border-radius: var(--radius-md);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-screen">
+    <div class="top-bar">
+      <div class="user-info">
+        <span>🎈 學習者：Serene</span>
+        <span id="sync-status-badge" class="sync-pill">💾 本機儲存</span>
+        <button class="btn btn-sm btn-secondary" onclick="pullFromCloud(true)">🔄 立即同步</button>
+      </div>
+      <div class="status-badges">
+        <div class="badge badge-done">✅ 今日已完成：<span id="today-done-count">0</span></div>
+        <div class="badge badge-todo">🔥 今日未完成：<span id="today-todo-count">0</span></div>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <div class="nav-tab active" onclick="switchTab('review')">🎯 開始複習</div>
+      <div class="nav-tab" onclick="switchTab('add-word')">➕ 新增單字</div>
+      <div class="nav-tab" onclick="switchTab('categories')">📁 分類與字庫</div>
+      <div class="nav-tab" onclick="switchTab('stats')">📊 學習統計</div>
+      <div class="nav-tab" onclick="switchTab('sync')">☁️ 跨裝置同步</div>
+    </div>
+
+    <div id="tab-review" class="tab-panel active">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0; color:var(--primary);">🌟 Serene 今日複習挑戰</h2>
+        <select id="review-cat-filter" style="width:auto; padding:8px 14px;" onchange="renderReviewCard()">
+          <option value="ALL">全部類別一起複習</option>
+        </select>
+      </div>
+      <div id="review-container"></div>
+    </div>
+
+    <div id="tab-add-word" class="tab-panel">
+      <h2 style="margin-top:0; color:var(--secondary);">✏️ 建立新的單字卡（含發音診斷台）</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>1. 選擇分類</label>
+          <select id="word-category"></select>
+        </div>
+        <div class="form-group">
+          <label>2. 選擇字卡型態</label>
+          <select id="word-type">
+            <option value="1">型態一：看中文 + 詞性 + 底線提示 ➔ 拼出英文</option>
+            <option value="2">型態二：聽英文發音（無底線）➔ 寫出英文 + 中文</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>3. 英文單字</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="word-en" value="advertisement" placeholder="例如：advertisement" />
+            <button class="btn btn-secondary btn-sm" type="button" onclick="previewSpeech()" style="white-space:nowrap;">🔊 試聽</button>
+          </div>
+          <div id="preview-speech-status" class="speech-status-hint"></div>
+        </div>
+        <div class="form-group">
+          <label>4. 單字詞性</label>
+          <select id="word-pos">
+            <option value="n.">n. (名詞)</option>
+            <option value="v.">v. (動詞)</option>
+            <option value="adj.">adj. (形容詞)</option>
+            <option value="adv.">adv. (副詞)</option>
+            <option value="prep.">prep. (介系詞)</option>
+            <option value="na">na (其他/片語)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="diag-box">
+        <div style="font-weight:700; color:#E65100;">🧪 語音與音效診斷台（請逐項點擊並回報結果）</div>
+        <div class="diag-buttons">
+          <button class="btn btn-sm btn-yellow" type="button" onclick="diagBeep()">🔔 1. 測試嗶聲</button>
+          <button class="btn btn-sm btn-purple" type="button" onclick="diagNativeTTS()">🗣️ 2. 測試內建語音</button>
+          <button class="btn btn-sm btn-secondary" type="button" onclick="diagOnlineAudio()">🌐 3. 測試線上音檔</button>
+          <button class="btn btn-sm btn-pink" type="button" onclick="clearDiagLog()">🧹 清空紀錄</button>
+        </div>
+        <div id="diag-log" class="diag-log">等待測試中...</div>
+      </div>
+
+      <div class="form-group">
+        <label>5. 中文意思</label>
+        <input type="text" id="word-zh" placeholder="例如：廣告" onkeypress="if(event.key==='Enter') addWordCard()" />
+      </div>
+
+      <button class="btn btn-green" style="width:100%; font-size:1.15rem;" onclick="addWordCard()">💾 儲存單字卡（立即加入今日狀態 0 複習）</button>
+    </div>
+
+    <div id="tab-categories" class="tab-panel">
+      <h2 style="margin-top:0; color:var(--accent-purple);">📁 分類管理（每分類上限 1,000 張）</h2>
+      <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <input type="text" id="new-cat-name" placeholder="輸入新分類名稱（例如：動物、學校單字）..." onkeypress="if(event.key==='Enter') addCategory()" />
+        <button class="btn btn-purple" onclick="addCategory()" style="white-space:nowrap;">➕ 新增分類</button>
+      </div>
+
+      <div class="form-group">
+        <label>檢視分類單字列表：</label>
+        <select id="manage-cat-select" onchange="renderWordList()"></select>
+      </div>
+      <div id="cat-count-info" style="margin-bottom:12px; font-weight:700; color:var(--text-light);"></div>
+      <div id="word-list-container"></div>
+    </div>
+
+    <div id="tab-stats" class="tab-panel">
+      <h2 style="margin-top:0; color:var(--accent-pink);">📊 學習成長統計</h2>
+      <div class="stat-summary">
+        <div class="stat-box">
+          <h3>📚 總單字卡數量</h3>
+          <div class="num" id="stat-total-cards">0</div>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9);">
+          <h3 style="color:#2E7D32;">✅ 今日已完成</h3>
+          <div class="num" style="color:#1B5E20;" id="stat-done-today">0</div>
+        </div>
+        <div class="stat-box" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">
+          <h3 style="color:#EF6C00;">🔥 今日待完成</h3>
+          <div class="num" style="color:#E65100;" id="stat-todo-today">0</div>
+        </div>
+      </div>
+
+      <h3 style="color:var(--text-main); margin-bottom:10px;">📅 未來 3 個月（90 天）每日預計複習單字數量</h3>
+      <div style="background:#FAFAFA; padding:16px; border-radius:var(--radius-md); border:2px solid #E0E0E0;">
+        <canvas id="forecastChart" height="130"></canvas>
+      </div>
+    </div>
+
+    <div id="tab-sync" class="tab-panel">
+      <h2 style="margin-top:0; color:#33691E;">☁️ iPhone / iPad / 網頁 跨裝置同步設定</h2>
+      <div class="sync-box">
+        <p style="margin-top:0; line-height:1.6;">
+          本程式已固定使用 <strong>Serene</strong> 帳號，開啟網頁即直接進入，不需登入。<br>
+          若要在不同裝置看到完全相同的單字與進度，請在 <strong>JSONBin.io</strong> 建立一個免費 Bin，並填入下方的 <strong>Bin ID</strong> 與 <strong>X-Master-Key</strong>：
+        </p>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Cloud Bin ID</label>
+            <input type="text" id="cloud-bin-id" placeholder="例如：674abc123def456..." />
+          </div>
+          <div class="form-group">
+            <label>Cloud Master Key (X-Master-Key)</label>
+            <input type="password" id="cloud-api-key" placeholder="例如：$2a$10$..." />
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-green" onclick="saveCloudConfigAndSync()">💾 儲存並立即同步</button>
+          <button class="btn btn-secondary" onclick="pushToCloud(true)">⬆️ 上傳本機到雲端</button>
+          <button class="btn btn-yellow" onclick="pullFromCloud(true)">⬇️ 從雲端下載最新</button>
+        </div>
+        <div id="cloud-sync-msg" style="margin-top:12px; font-weight:700; color:#2E7D32;"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const FIXED_USER = 'Serene';
+  const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
+  const MAX_CARDS_PER_CATEGORY = 1000;
+  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v2';
+  const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v1';
+
+  let userData = createDefaultUserData();
+  let cloudConfig = { binId: '', apiKey: '' };
+  let currentReviewCardId = null;
+  let awaitingNext = false;
+  let chartInstance = null;
+  let currentAudioEl = null;
+  let preferredVoice = null;
+  let hintClearTimer = null;
+
+  function logDiag(msg) {
+    const el = document.getElementById('diag-log');
+    if (!el) return;
+    const now = new Date().toTimeString().slice(0, 8);
+    if (el.textContent === '等待測試中...') el.textContent = '';
+    el.textContent += `[${now}] ${msg}\n`;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function clearDiagLog() {
+    const el = document.getElementById('diag-log');
+    if (el) el.textContent = '等待測試中...';
+  }
+
+  function createDefaultUserData() {
+    return {
+      userName: FIXED_USER,
+      updatedAt: Date.now(),
+      categories: [{ id: 'cat_default', name: '基礎單字' }],
+      cards: [],
+      dailyLog: {
+        date: getLogicalDateStr(),
+        completedIds: []
+      }
+    };
+  }
+
+  function getLogicalDateStr(dateObj = new Date()) {
+    const shifted = new Date(dateObj.getTime() - 6 * 60 * 60 * 1000);
+    const y = shifted.getFullYear();
+    const m = String(shifted.getMonth() + 1).padStart(2, '0');
+    const d = String(shifted.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function addDaysToLogicalDate(logicalDateStr, daysToAdd) {
+    const [y, m, d] = logicalDateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + daysToAdd);
+    const ny = dt.getFullYear();
+    const nm = String(dt.getMonth() + 1).padStart(2, '0');
+    const nd = String(dt.getDate()).padStart(2, '0');
+    return `${ny}-${nm}-${nd}`;
+  }
+
+  function pickSystemVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+    preferredVoice =
+      voices.find(v => v.name.includes('Samantha')) ||
+      voices.find(v => v.name.includes('Google US English')) ||
+      voices.find(v => v.lang === 'en-US') ||
+      voices.find(v => v.lang.toLowerCase().startsWith('en')) ||
+      null;
+    return preferredVoice;
+  }
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = pickSystemVoice;
+    pickSystemVoice();
+  }
+
+  function setPreviewHint(msg) {
+    const el = document.getElementById('preview-speech-status');
+    if (el) el.textContent = msg || '';
+  }
+
+  function showTemporaryHint(msg, ms = 3000) {
+    setPreviewHint(msg);
+    if (hintClearTimer) clearTimeout(hintClearTimer);
+    if (ms > 0) {
+      hintClearTimer = setTimeout(() => {
+        setPreviewHint('');
+      }, ms);
+    }
+  }
+
+  // 診斷 1：Web Audio 嗶聲
+  function diagBeep() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) {
+        logDiag('BEEP: 瀏覽器不支援 AudioContext');
+        return;
+      }
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.2;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      setTimeout(() => {
+        osc.stop();
+        ctx.close();
+      }, 220);
+      logDiag(`BEEP: 已觸發 (state=${ctx.state})，請回報是否有聽到嗶聲`);
+    } catch (e) {
+      logDiag('BEEP ERROR: ' + e.message);
+    }
+  }
+
+  // 診斷 2：瀏覽器內建語音
+  function diagNativeTTS() {
+    const word = (document.getElementById('word-en')?.value || 'advertisement').trim();
+    if (!('speechSynthesis' in window)) {
+      logDiag('TTS: 不支援 speechSynthesis');
+      return;
+    }
+    const voices = window.speechSynthesis.getVoices() || [];
+    logDiag(`TTS 開始: word="${word}", voices=${voices.length}, paused=${window.speechSynthesis.paused}`);
+    try {
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(word);
+      utter.lang = 'en-US';
+      utter.rate = 0.9;
+      utter.volume = 1.0;
+      utter.onstart = () => logDiag('TTS EVENT: onstart');
+      utter.onend = () => logDiag('TTS EVENT: onend');
+      utter.onerror = (e) => logDiag('TTS EVENT: onerror (' + (e.error || 'unknown') + ')');
+      window.speechSynthesis.speak(utter);
+    } catch (e) {
+      logDiag('TTS CATCH: ' + e.message);
+    }
+  }
+
+  // 診斷 3：線上音訊連結
+  function diagOnlineAudio() {
+    const word = (document.getElementById('word-en')?.value || 'advertisement').trim();
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(word)}&tl=en&client=tw-ob`;
+    logDiag(`AUDIO 開始: ${url}`);
+    try {
+      if (currentAudioEl) {
+        currentAudioEl.pause();
+        currentAudioEl = null;
+      }
+      const audio = new Audio(url);
+      currentAudioEl = audio;
+      audio.onplaying = () => logDiag('AUDIO EVENT: onplaying');
+      audio.onended = () => logDiag('AUDIO EVENT: onended');
+      audio.onerror = () => logDiag('AUDIO EVENT: onerror (可能被 CORS 或網路封鎖)');
+      const p = audio.play();
+      if (p && p.catch) {
+        p.catch(err => logDiag('AUDIO PLAY REJECT: ' + err.message));
+      }
+    } catch (e) {
+      logDiag('AUDIO CATCH: ' + e.message);
+    }
+  }
+
+  function speakEnglish(text, isPreview = false) {
+    const clean = (text || '').trim();
+    if (!clean) return;
+
+    if (currentAudioEl) {
+      currentAudioEl.pause();
+      currentAudioEl.currentTime = 0;
+      currentAudioEl = null;
+    }
+
+    if (isPreview) {
+      showTemporaryHint('🔊 正在播放英文發音...', 3000);
+    }
+
+    if ('speechSynthesis' in window) {
+      try {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        window.speechSynthesis.cancel();
+
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.lang = 'en-US';
+        if (preferredVoice) utter.voice = preferredVoice;
+        utter.rate = 0.9;
+        utter.volume = 1.0;
+
+        utter.onend = () => {
+          if (isPreview) showTemporaryHint('', 0);
+        };
+        utter.onerror = (e) => {
+          logDiag('試聽 TTS 錯誤: ' + (e.error || 'unknown'));
+          if (isPreview) showTemporaryHint('⚠️ 語音無聲或受阻，請查看診斷台', 3000);
+        };
+
+        window.speechSynthesis.speak(utter);
+        return;
+      } catch (e) {
+        logDiag('試聽例外: ' + e.message);
+      }
+    }
+
+    if (isPreview) showTemporaryHint('⚠️ 此瀏覽器不支援內建語音', 3000);
+  }
+
+  function previewSpeech() {
+    const input = document.getElementById('word-en');
+    const val = input ? input.value.trim() : '';
+    if (!val) {
+      alert('請先輸入英文單字（例如 advertisement）再按試聽喔！');
+      input?.focus();
+      return;
+    }
+    logDiag(`點擊「試聽」: "${val}"`);
+    speakEnglish(val, true);
+  }
+
+  function loadLocalState() {
+    try {
+      const rawCfg = localStorage.getItem(CLOUD_CFG_KEY);
+      if (rawCfg) cloudConfig = JSON.parse(rawCfg);
+    } catch (e) {}
+
+    try {
+      const rawData = localStorage.getItem(LOCAL_DATA_KEY);
+      if (rawData) {
+        const parsed = JSON.parse(rawData);
+        userData = { ...createDefaultUserData(), ...parsed, userName: FIXED_USER };
+      }
+    } catch (e) {}
+
+    document.getElementById('cloud-bin-id').value = cloudConfig.binId || '';
+    document.getElementById('cloud-api-key').value = cloudConfig.apiKey || '';
+    updateSyncBadge(cloudConfig.binId && cloudConfig.apiKey ? '☁️ 已啟用雲端同步' : '💾 本機儲存');
+  }
+
+  function updateSyncBadge(text) {
+    const badge = document.getElementById('sync-status-badge');
+    if (badge) badge.textContent = text;
+  }
+
+  function saveState(syncCloud = true) {
+    userData.updatedAt = Date.now();
+    localStorage.setItem(LOCAL_DATA_KEY, JSON.stringify(userData));
+    if (syncCloud && cloudConfig.binId && cloudConfig.apiKey) {
+      pushToCloud(false);
+    }
+  }
+
+  function saveCloudConfigAndSync() {
+    const binId = document.getElementById('cloud-bin-id').value.trim();
+    const apiKey = document.getElementById('cloud-api-key').value.trim();
+    if (!binId || !apiKey) {
+      alert('請同時輸入 Cloud Bin ID 與 Cloud Master Key 喔！');
+      return;
+    }
+    cloudConfig = { binId, apiKey };
+    localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudConfig));
+    updateSyncBadge('☁️ 已啟用雲端同步');
+    pullFromCloud(true);
+  }
+
+  async function pushToCloud(showNotice = false) {
+    if (!cloudConfig.binId || !cloudConfig.apiKey) return;
+    const msgEl = document.getElementById('cloud-sync-msg');
+    try {
+      updateSyncBadge('☁️ 上傳中...');
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(cloudConfig.binId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': cloudConfig.apiKey
+        },
+        body: JSON.stringify(userData)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      updateSyncBadge('☁️ 雲端已同步');
+      if (showNotice && msgEl) msgEl.textContent = '✅ 已成功將 Serene 的資料上傳至雲端！';
+    } catch (e) {
+      updateSyncBadge('⚠️ 同步失敗');
+      if (showNotice && msgEl) msgEl.textContent = '⚠️ 上傳失敗，請檢查 Bin ID 與 Master Key 是否正確。';
+    }
+  }
+
+  async function pullFromCloud(showNotice = false) {
+    if (!cloudConfig.binId || !cloudConfig.apiKey) {
+      if (showNotice) alert('尚未設定雲端同步金鑰，請先到「☁️ 跨裝置同步」分頁設定。');
+      return;
+    }
+    const msgEl = document.getElementById('cloud-sync-msg');
+    try {
+      updateSyncBadge('☁️ 下載中...');
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(cloudConfig.binId)}/latest`, {
+        headers: {
+          'X-Master-Key': cloudConfig.apiKey
+        }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const remoteData = json && json.record ? json.record : null;
+
+      if (remoteData && Array.isArray(remoteData.cards)) {
+        if ((remoteData.updatedAt || 0) >= (userData.updatedAt || 0) || userData.cards.length === 0) {
+          userData = { ...createDefaultUserData(), ...remoteData, userName: FIXED_USER };
+          localStorage.setItem(LOCAL_DATA_KEY, JSON.stringify(userData));
+          syncDailyRollover();
+          refreshAllUI();
+        } else {
+          await pushToCloud(false);
+        }
+        updateSyncBadge('☁️ 雲端已同步');
+        if (showNotice && msgEl) msgEl.textContent = '✅ 已同步最新雲端資料（Serene）！';
+      }
+    } catch (e) {
+      updateSyncBadge('⚠️ 同步失敗');
+      if (showNotice && msgEl) msgEl.textContent = '⚠️ 雲端讀取失敗，請確認網路與金鑰設定。';
+    }
+  }
+
+  function syncDailyRollover() {
+    const today = getLogicalDateStr();
+    if (!userData.dailyLog || userData.dailyLog.date !== today) {
+      userData.dailyLog = {
+        date: today,
+        completedIds: []
+      };
+      saveState(true);
+    }
+  }
+
+  function getTodayCounts() {
+    syncDailyRollover();
+    const today = getLogicalDateStr();
+    const dueCards = userData.cards.filter(c => c.dueDate <= today);
+    const todoCount = dueCards.length;
+    const validCompleted = userData.dailyLog.completedIds.filter(id =>
+      userData.cards.some(c => c.id === id)
+    );
+    const doneCount = validCompleted.length;
+    return { doneCount, todoCount, dueCards };
+  }
+
+  function updateTopCounters() {
+    const { doneCount, todoCount } = getTodayCounts();
+    document.getElementById('today-done-count').textContent = doneCount;
+    document.getElementById('today-todo-count').textContent = todoCount;
+    document.getElementById('stat-done-today').textContent = doneCount;
+    document.getElementById('stat-todo-today').textContent = todoCount;
+    document.getElementById('stat-total-cards').textContent = userData.cards.length;
+  }
+
+  function switchTab(tabName) {
+    const names = ['review', 'add-word', 'categories', 'stats', 'sync'];
+    document.querySelectorAll('.nav-tab').forEach((el, idx) => {
+      el.classList.toggle('active', names[idx] === tabName);
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+
+    if (tabName === 'review') renderReviewCard();
+    if (tabName === 'categories') renderWordList();
+    if (tabName === 'stats') renderStatsChart();
+  }
+
+  function populateCategorySelects() {
+    const wordCat = document.getElementById('word-category');
+    const manageCat = document.getElementById('manage-cat-select');
+    const reviewFilter = document.getElementById('review-cat-filter');
+
+    const prevReviewVal = reviewFilter.value;
+    const prevManageVal = manageCat.value;
+
+    wordCat.innerHTML = '';
+    manageCat.innerHTML = '';
+    reviewFilter.innerHTML = '<option value="ALL">全部類別一起複習</option>';
+
+    userData.categories.forEach(cat => {
+      const count = userData.cards.filter(c => c.categoryId === cat.id).length;
+      wordCat.add(new Option(`${cat.name} (${count}/${MAX_CARDS_PER_CATEGORY})`, cat.id));
+      manageCat.add(new Option(`${cat.name} (${count}/${MAX_CARDS_PER_CATEGORY})`, cat.id));
+      reviewFilter.add(new Option(`${cat.name}`, cat.id));
+    });
+
+    if ([...reviewFilter.options].some(o => o.value === prevReviewVal)) {
+      reviewFilter.value = prevReviewVal;
+    }
+    if ([...manageCat.options].some(o => o.value === prevManageVal)) {
+      manageCat.value = prevManageVal;
+    }
+  }
+
+  function addCategory() {
+    const input = document.getElementById('new-cat-name');
+    const name = input.value.trim();
+    if (!name) return;
+    if (userData.categories.some(c => c.name === name)) {
+      alert('這個分類已經存在囉！');
+      return;
+    }
+    const newCat = { id: 'cat_' + Date.now(), name };
+    userData.categories.push(newCat);
+    saveState(true);
+    input.value = '';
+    populateCategorySelects();
+    document.getElementById('manage-cat-select').value = newCat.id;
+    renderWordList();
+  }
+
+  function addWordCard() {
+    const categoryId = document.getElementById('word-category').value;
+    const type = document.getElementById('word-type').value;
+    const en = document.getElementById('word-en').value.trim();
+    const pos = document.getElementById('word-pos').value;
+    const zh = document.getElementById('word-zh').value.trim();
+
+    if (!categoryId) {
+      alert('請先建立一個分類！');
+      return;
+    }
+    if (!en || !zh) {
+      alert('請完整填寫英文單字與中文意思喔！');
+      return;
+    }
+
+    const catCards = userData.cards.filter(c => c.categoryId === categoryId);
+    if (catCards.length >= MAX_CARDS_PER_CATEGORY) {
+      alert(`這個分類已經達到 ${MAX_CARDS_PER_CATEGORY} 個單字上限囉！`);
+      return;
+    }
+
+    const today = getLogicalDateStr();
+    userData.cards.push({
+      id: 'card_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      categoryId,
+      type,
+      en,
+      pos,
+      zh,
+      fibIndex: 0,
+      dueDate: today,
+      createdAt: today
+    });
+
+    saveState(true);
+    document.getElementById('word-en').value = '';
+    document.getElementById('word-zh').value = '';
+    setPreviewHint('');
+    refreshAllUI();
+    alert(`🎉 成功加入「${en}」！已列入今日狀態 0 複習清單。`);
+  }
+
+  function deleteCard(cardId) {
+    if (!confirm('確定要刪除這張單字卡嗎？')) return;
+    userData.cards = userData.cards.filter(c => c.id !== cardId);
+    userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
+    saveState(true);
+    refreshAllUI();
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderWordList() {
+    const catId = document.getElementById('manage-cat-select').value;
+    const container = document.getElementById('word-list-container');
+    const info = document.getElementById('cat-count-info');
+    const cards = userData.cards.filter(c => c.categoryId === catId);
+
+    info.textContent = `目前分類共有 ${cards.length} / ${MAX_CARDS_PER_CATEGORY} 張單字卡`;
+
+    if (!cards.length) {
+      container.innerHTML = `<p style="text-align:center; color:var(--text-light); padding:20px;">這個分類還沒有單字喔，快去新增吧！</p>`;
+      return;
+    }
+
+    container.innerHTML = '';
+    cards.forEach(c => {
+      const item = document.createElement('div');
+      item.className = `word-list-item ${c.type === '2' ? 'type2' : ''}`;
+
+      const leftDiv = document.createElement('div');
+      const titleDiv = document.createElement('div');
+      titleDiv.style.cssText = 'font-size:1.15rem; font-weight:700;';
+      titleDiv.innerHTML = `${escapeHtml(c.en)} <span style="color:#00796B; font-size:0.95rem;">(${escapeHtml(c.pos)})</span> — ${escapeHtml(c.zh)} `;
+
+      const speakBtn = document.createElement('button');
+      speakBtn.className = 'btn btn-sm btn-secondary';
+      speakBtn.style.cssText = 'padding:2px 8px; margin-left:6px;';
+      speakBtn.textContent = '🔊';
+      speakBtn.onclick = () => speakEnglish(c.en);
+      titleDiv.appendChild(speakBtn);
+
+      const metaDiv = document.createElement('div');
+      metaDiv.style.cssText = 'font-size:0.85rem; color:var(--text-light); margin-top:4px;';
+      metaDiv.innerHTML = `${c.type === '1' ? '📝 型態一(中文拼英文)' : '🎧 型態二(聽音寫英中)'} ｜ <span class="fib-pill">費氏階段 #${c.fibIndex} (間隔 ${FIB_SEQUENCE[c.fibIndex] ?? 377} 天)</span> ｜ 下次複習：${c.dueDate}`;
+
+      leftDiv.appendChild(titleDiv);
+      leftDiv.appendChild(metaDiv);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-sm btn-pink';
+      delBtn.textContent = '刪除';
+      delBtn.onclick = () => deleteCard(c.id);
+
+      item.appendChild(leftDiv);
+      item.appendChild(delBtn);
+      container.appendChild(item);
+    });
+  }
+
+  function renderReviewCard() {
+    awaitingNext = false;
+    const { dueCards } = getTodayCounts();
+    const filterCat = document.getElementById('review-cat-filter').value;
+    const filtered = filterCat === 'ALL'
+      ? dueCards
+      : dueCards.filter(c => c.categoryId === filterCat);
+
+    const container = document.getElementById('review-container');
+
+    if (!filtered.length) {
+      currentReviewCardId = null;
+      container.innerHTML = `
+        <div class="review-card" style="border-color: var(--accent-green);">
+          <div style="font-size: 4rem;">🏆🎉🌟</div>
+          <h2 style="color: var(--accent-green); margin: 10px 0;">太棒了！今天沒有待複習的單字囉！</h2>
+          <p style="color: var(--text-light);">你可以去「新增單字」加入更多單字卡，或是明天早上 6:00 再回來挑戰！</p>
+        </div>
+      `;
+      return;
+    }
+
+    const card = filtered[0];
+    currentReviewCardId = card.id;
+    const catName = userData.categories.find(c => c.id === card.categoryId)?.name || '未分類';
+
+    if (card.type === '1') {
+      const slotsHtml = card.en.split('').map(ch => {
+        if (ch === ' ') return `<div class="letter-slot space"></div>`;
+        return `<div class="letter-slot" data-char=""></div>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="review-card">
+          <div class="card-tag">📁 ${escapeHtml(catName)} ｜ 費氏階段 #${card.fibIndex}</div>
+          <div class="prompt-chinese">${escapeHtml(card.zh)}</div>
+          <div class="prompt-pos">詞性：${escapeHtml(card.pos)}</div>
+          <div style="font-size:0.95rem; color:var(--text-light);">請填入英文單字（共 ${card.en.replace(/\s/g, '').length} 個字母）：</div>
+          <div class="letter-slots" id="letter-slots-box">${slotsHtml}</div>
+          <div class="form-group" style="max-width:360px; margin:0 auto 16px;">
+            <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+              placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer()" />
+          </div>
+          <button id="submit-ans-btn" class="btn btn-primary" style="width:100%; max-width:360px;" onclick="submitAnswer()">✨ 送出答案</button>
+          <div id="review-feedback" class="feedback-banner"></div>
+        </div>
+      `;
+      setTimeout(() => document.getElementById('ans-en-input')?.focus(), 100);
+    } else {
+      container.innerHTML = `
+        <div class="review-card" style="border-color: var(--accent-pink);">
+          <div class="card-tag" style="background:var(--accent-pink);">📁 ${escapeHtml(catName)} ｜ 費氏階段 #${card.fibIndex}</div>
+          <div style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-top:6px;">🎧 聽發音，寫出英文和中文！</div>
+          <button id="review-play-audio-btn" class="audio-btn-big" type="button">🔊</button>
+          <div style="font-size:0.9rem; color:var(--text-light); margin-bottom:16px;">（點擊喇叭可以再聽一次喔）</div>
+          <div class="form-group" style="max-width:380px; margin:0 auto 12px;">
+            <label>英文單字：</label>
+            <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+              placeholder="請輸入聽到的英文..." />
+          </div>
+          <div class="form-group" style="max-width:380px; margin:0 auto 16px;">
+            <label>中文意思：</label>
+            <input type="text" id="ans-zh-input" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer()" />
+          </div>
+          <button id="submit-ans-btn" class="btn btn-pink" style="width:100%; max-width:380px;" onclick="submitAnswer()">✨ 送出答案</button>
+          <div id="review-feedback" class="feedback-banner"></div>
+        </div>
+      `;
+      document.getElementById('review-play-audio-btn').onclick = () => speakEnglish(card.en);
+      setTimeout(() => speakEnglish(card.en), 250);
+    }
+  }
+
+  function syncLetterSlots(val) {
+    const slots = document.querySelectorAll('#letter-slots-box .letter-slot:not(.space)');
+    const cleanChars = val.replace(/\s/g, '').split('');
+    slots.forEach((slot, idx) => {
+      slot.textContent = cleanChars[idx] || '';
+    });
+  }
+
+  function submitAnswer() {
+    if (awaitingNext) {
+      renderReviewCard();
+      return;
+    }
+    const card = userData.cards.find(c => c.id === currentReviewCardId);
+    if (!card) return;
+
+    const enAns = document.getElementById('ans-en-input').value.trim().toLowerCase();
+    const targetEn = card.en.trim().toLowerCase();
+
+    let isCorrect = false;
+    if (card.type === '1') {
+      isCorrect = (enAns === targetEn);
+    } else {
+      const zhAns = document.getElementById('ans-zh-input').value.trim();
+      const validZhList = card.zh.split(/[,，/、;；]/).map(s => s.trim()).filter(Boolean);
+      const zhMatch = zhAns.length > 0 && (zhAns === card.zh.trim() || validZhList.includes(zhAns));
+      isCorrect = (enAns === targetEn) && zhMatch;
+    }
+
+    const today = getLogicalDateStr();
+    const feedbackEl = document.getElementById('review-feedback');
+    const btnEl = document.getElementById('submit-ans-btn');
+
+    if (isCorrect) {
+      const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
+      const intervalDays = FIB_SEQUENCE[nextIndex];
+      card.fibIndex = nextIndex;
+      card.dueDate = addDaysToLogicalDate(today, intervalDays);
+
+      if (!userData.dailyLog.completedIds.includes(card.id)) {
+        userData.dailyLog.completedIds.push(card.id);
+      }
+
+      speakEnglish(card.en);
+      feedbackEl.className = 'feedback-banner feedback-correct';
+      feedbackEl.innerHTML = `🎉 答對了！太厲害了！<br><small>下次複習時間：${intervalDays} 天後 (${card.dueDate})</small>`;
+      feedbackEl.style.display = 'block';
+    } else {
+      card.fibIndex = 0;
+      card.dueDate = today;
+      userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== card.id);
+
+      speakEnglish(card.en);
+      feedbackEl.className = 'feedback-banner feedback-wrong';
+      feedbackEl.innerHTML = `💪 加油！差一點點！<br>正確答案：<b>${escapeHtml(card.en)}</b> (${escapeHtml(card.pos)}) — <b>${escapeHtml(card.zh)}</b><br><small>此單字已重設為階段 0，稍後再挑戰一次！</small>`;
+      feedbackEl.style.display = 'block';
+    }
+
+    saveState(true);
+    updateTopCounters();
+    awaitingNext = true;
+    btnEl.textContent = '➡️ 下一題';
+    btnEl.focus();
+  }
+
+  function renderStatsChart() {
+    const today = getLogicalDateStr();
+    const labels = [];
+    const counts = [];
+    const dateMap = {};
+
+    for (let i = 0; i < 90; i++) {
+      const dStr = addDaysToLogicalDate(today, i);
+      labels.push(dStr.slice(5));
+      dateMap[dStr] = 0;
+    }
+
+    userData.cards.forEach(card => {
+      const effectiveDate = card.dueDate < today ? today : card.dueDate;
+      if (dateMap[effectiveDate] !== undefined) {
+        dateMap[effectiveDate]++;
+      }
+    });
+
+    for (let i = 0; i < 90; i++) {
+      const dStr = addDaysToLogicalDate(today, i);
+      counts.push(dateMap[dStr]);
+    }
+
+    const ctx = document.getElementById('forecastChart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: '預計複習單字數',
+          data: counts,
+          backgroundColor: '#26C6DA',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => `日期：${items[0].label}`,
+              label: (item) => `預計複習：${item.raw} 個單字`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { maxTicksLimit: 15 } },
+          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+      }
+    });
+  }
+
+  function refreshAllUI() {
+    populateCategorySelects();
+    updateTopCounters();
+    renderReviewCard();
+    renderWordList();
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    loadLocalState();
+    syncDailyRollover();
+    refreshAllUI();
+    logDiag('UA: ' + navigator.userAgent);
+    if (cloudConfig.binId && cloudConfig.apiKey) {
+      await pullFromCloud(false);
+    }
+  });
+</script>
+</body>
+</html>
