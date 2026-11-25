@@ -372,8 +372,16 @@
       margin: 0 auto;
     }
 
-    .subtle-toy-delete {
-      margin-top: 14px;
+    .subtle-aux-row {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .subtle-toy-action {
       background: transparent;
       border: 1px dashed #CFD8DC;
       color: #90A4AE;
@@ -388,7 +396,7 @@
       transition: 0.2s;
     }
 
-    .subtle-toy-delete:hover {
+    .subtle-toy-action:hover {
       opacity: 1;
       color: #546E7A;
       border-color: #90A4AE;
@@ -746,7 +754,7 @@
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
   const MAX_CARDS_PER_CATEGORY = 1000;
   const PASSCODE_0000 = '0000';
-  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v8';
+  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v9';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
 
   const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
@@ -762,7 +770,6 @@
   let hintClearTimer = null;
   let audioCtx = null;
 
-  // 音效佇列：確保前一個音效完整播完才進入下一個音效，絕不打架
   let audioQueue = Promise.resolve();
 
   function waitMs(ms) {
@@ -1027,7 +1034,6 @@
 
         window.speechSynthesis.speak(utter);
 
-        // 防止部分行動瀏覽器未觸發 onend 導致佇列卡死
         const fallbackMs = Math.max(1200, clean.length * 140 + 900);
         setTimeout(done, fallbackMs);
       } catch (e) {
@@ -1077,6 +1083,7 @@
     try {
       const rawData =
         localStorage.getItem(LOCAL_DATA_KEY) ||
+        localStorage.getItem('serene_fib_vocab_data_v8') ||
         localStorage.getItem('serene_fib_vocab_data_v7') ||
         localStorage.getItem('serene_fib_vocab_data_v6') ||
         localStorage.getItem('serene_fib_vocab_data_v5') ||
@@ -1583,7 +1590,6 @@
     }
 
     const card = pickNextReviewCard(filtered);
-    // 建立不可變快照，確保此題作答與答錯顯示解答絕對同一張卡
     activeQuestionSnapshot = {
       id: card.id,
       categoryId: card.categoryId,
@@ -1615,10 +1621,10 @@
     const actionButtonsHtml = (submitBtnClass) => `
       <div class="review-actions-row">
         <button id="submit-ans-btn" class="btn ${submitBtnClass}" style="width:100%;" onclick="submitAnswer()">✨ 送出答案</button>
-        <button id="learned-today-btn" type="button" class="btn btn-green btn-sm" style="width:100%;" onclick="confirmAndForceLearnCard('${card.id}')">🌟 今天真的學會了（需密碼 0000）</button>
       </div>
-      <div>
-        <button type="button" class="subtle-toy-delete" onclick="deleteCurrentReviewCardWithPasscode()">🎈🔍 太簡單了!刪掉!</button>
+      <div class="subtle-aux-row">
+        <button type="button" class="subtle-toy-action" onclick="confirmAndForceLearnCard('${card.id}')">🌟 今天真的學會!</button>
+        <button type="button" class="subtle-toy-action" onclick="deleteCurrentReviewCardWithPasscode()">🎈🔍 太簡單了!刪掉!</button>
       </div>
     `;
 
@@ -1688,10 +1694,10 @@
       : userData.cards.find(c => c.id === cardId);
     if (!snap) return;
 
-    if (!confirm(`🌟 確定要將「${snap.en}」標記為「今天真的學會了」，強制進入下一階並列入今日完成嗎？`)) {
+    if (!confirm(`🌟 確定要將「${snap.en}」標記為「今天真的學會!」，強制進入下一階並列入今日完成嗎？`)) {
       return;
     }
-    if (!verifyPasscode0000('🌟 今天真的學會了確認')) return;
+    if (!verifyPasscode0000('🌟 今天真的學會!確認')) return;
 
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return;
@@ -1810,7 +1816,6 @@
       saveState(true);
       updateTopCounters();
 
-      // 1. 答對動畫與音效排隊播放完畢，再渲染下一題（下一題若是型態二，語音會自動排在後面）
       await Promise.all([
         showFullScreenAnimation(true, 1450),
         queueHappySound()
@@ -1831,13 +1836,11 @@
       saveState(true);
       updateTopCounters();
 
-      // 1. 答錯動畫與音效先完整播完
       await Promise.all([
         showFullScreenAnimation(false, 1500),
         queueSadSound()
       ]);
 
-      // 2. 顯示中央解答卡，並將答錯解答語音排在傷心音效之後
       renderWrongAnswerCenterView(snap);
       await queueSpeakEnglish(snap.en);
     }
