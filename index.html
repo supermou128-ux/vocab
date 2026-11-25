@@ -395,7 +395,6 @@
       background: #FAFAFA;
     }
 
-    /* 答錯後中央顯眼答案卡 */
     .wrong-center-box {
       background: linear-gradient(135deg, #FFF5F5 0%, #FFE3E3 100%);
       border: 4px solid #EF5350;
@@ -435,7 +434,6 @@
       to { opacity: 1; transform: scale(1); }
     }
 
-    /* 滿版動畫遮罩 */
     .fullscreen-anim-overlay {
       position: fixed;
       inset: 0;
@@ -747,8 +745,8 @@
   const FIXED_USER = 'Serene';
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
   const MAX_CARDS_PER_CATEGORY = 1000;
-  const DELETE_PASSCODE = '0000';
-  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v7';
+  const PASSCODE_0000 = '0000';
+  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v8';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
 
   const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
@@ -756,12 +754,34 @@
 
   let userData = createDefaultUserData();
   let cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
-  let currentReviewCardId = null;
+  let activeQuestionSnapshot = null;
+  let isViewingWrongAnswer = false;
   let lastShownCardId = null;
   let chartInstance = null;
   let preferredVoice = null;
   let hintClearTimer = null;
   let audioCtx = null;
+
+  // 音效佇列：確保前一個音效完整播完才進入下一個音效，絕不打架
+  let audioQueue = Promise.resolve();
+
+  function waitMs(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function enqueueAudioTask(taskFn, gapAfterMs = 140) {
+    audioQueue = audioQueue
+      .catch(() => {})
+      .then(async () => {
+        try {
+          await taskFn();
+        } catch (e) {}
+        if (gapAfterMs > 0) {
+          await waitMs(gapAfterMs);
+        }
+      });
+    return audioQueue;
+  }
 
   function createDefaultUserData() {
     return {
@@ -840,44 +860,52 @@
     return audioCtx;
   }
 
-  function playHappySound() {
-    const ctx = ensureAudioContext();
-    if (!ctx) return;
-    const notes = [523.25, 659.25, 783.99, 1046.5];
-    const now = ctx.currentTime;
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.11);
-      gain.gain.setValueAtTime(0.001, now + idx * 0.11);
-      gain.gain.exponentialRampToValueAtTime(0.22, now + idx * 0.11 + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.24);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.11);
-      osc.stop(now + idx * 0.11 + 0.25);
+  function playToneSequence(notes, type, stepSec, noteDurSec, peakGain) {
+    return new Promise(resolve => {
+      const ctx = ensureAudioContext();
+      if (!ctx) {
+        resolve();
+        return;
+      }
+      const now = ctx.currentTime + 0.02;
+      let finishedCount = 0;
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const startAt = now + idx * stepSec;
+        const stopAt = startAt + noteDurSec;
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, startAt);
+        gain.gain.setValueAtTime(0.0001, startAt);
+        gain.gain.exponentialRampToValueAtTime(peakGain, startAt + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.onended = () => {
+          finishedCount++;
+          if (finishedCount === notes.length) resolve();
+        };
+        osc.start(startAt);
+        osc.stop(stopAt + 0.02);
+      });
+
+      const totalWaitMs = (notes.length * stepSec + noteDurSec + 0.12) * 1000;
+      setTimeout(resolve, totalWaitMs);
     });
   }
 
-  function playSadSound() {
-    const ctx = ensureAudioContext();
-    if (!ctx) return;
-    const notes = [392.0, 349.23, 311.13, 261.63];
-    const now = ctx.currentTime;
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.16);
-      gain.gain.setValueAtTime(0.001, now + idx * 0.16);
-      gain.gain.exponentialRampToValueAtTime(0.14, now + idx * 0.16 + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.16 + 0.28);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.16);
-      osc.stop(now + idx * 0.16 + 0.3);
-    });
+  function queueHappySound() {
+    return enqueueAudioTask(() =>
+      playToneSequence([523.25, 659.25, 783.99, 1046.5], 'triangle', 0.12, 0.24, 0.22)
+    );
+  }
+
+  function queueSadSound() {
+    return enqueueAudioTask(() =>
+      playToneSequence([392.0, 349.23, 311.13, 261.63], 'sawtooth', 0.17, 0.28, 0.14)
+    );
   }
 
   function showFullScreenAnimation(isHappy, durationMs = 1500) {
@@ -915,12 +943,6 @@
       overlay.appendChild(mainEmoji);
       overlay.appendChild(mainText);
       document.body.appendChild(overlay);
-
-      if (isHappy) {
-        playHappySound();
-      } else {
-        playSadSound();
-      }
 
       setTimeout(() => {
         overlay.remove();
@@ -962,9 +984,9 @@
     }
   }
 
-  function speakEnglish(text, isPreview = false) {
+  function speakEnglishNow(text, isPreview = false) {
     const clean = (text || '').trim();
-    if (!clean) return;
+    if (!clean) return Promise.resolve();
 
     if (isPreview) {
       showTemporaryHint('🔊 正在播放英文發音...', 3000);
@@ -972,35 +994,51 @@
 
     if (!('speechSynthesis' in window)) {
       if (isPreview) showTemporaryHint('⚠️ 此瀏覽器不支援內建語音', 3000);
-      return;
+      return Promise.resolve();
     }
 
-    try {
-      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-      window.speechSynthesis.cancel();
-
-      const voice = preferredVoice || pickSystemVoice();
-      const utter = new SpeechSynthesisUtterance(clean);
-      utter.lang = 'en-US';
-      if (voice) utter.voice = voice;
-      utter.rate = 0.9;
-      utter.volume = 1.0;
-
-      utter.onend = () => {
+    return new Promise(resolve => {
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
         if (isPreview) showTemporaryHint('', 0);
-      };
-      utter.onerror = (e) => {
-        if (e && e.error === 'canceled') {
-          if (isPreview) showTemporaryHint('', 0);
-          return;
-        }
-        if (isPreview) showTemporaryHint('⚠️ 語音播放失敗，請檢查裝置音量或語音設定', 3000);
+        resolve();
       };
 
-      window.speechSynthesis.speak(utter);
-    } catch (e) {
-      if (isPreview) showTemporaryHint('⚠️ 語音播放失敗', 3000);
-    }
+      try {
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        const voice = preferredVoice || pickSystemVoice();
+        const utter = new SpeechSynthesisUtterance(clean);
+        utter.lang = 'en-US';
+        if (voice) utter.voice = voice;
+        utter.rate = 0.9;
+        utter.volume = 1.0;
+
+        utter.onend = () => done();
+        utter.onerror = (e) => {
+          if (e && e.error === 'canceled') {
+            done();
+            return;
+          }
+          if (isPreview) showTemporaryHint('⚠️ 語音播放失敗，請檢查裝置音量或語音設定', 3000);
+          done();
+        };
+
+        window.speechSynthesis.speak(utter);
+
+        // 防止部分行動瀏覽器未觸發 onend 導致佇列卡死
+        const fallbackMs = Math.max(1200, clean.length * 140 + 900);
+        setTimeout(done, fallbackMs);
+      } catch (e) {
+        if (isPreview) showTemporaryHint('⚠️ 語音播放失敗', 3000);
+        done();
+      }
+    });
+  }
+
+  function queueSpeakEnglish(text, isPreview = false) {
+    return enqueueAudioTask(() => speakEnglishNow(text, isPreview));
   }
 
   function previewSpeech() {
@@ -1011,7 +1049,7 @@
       input?.focus();
       return;
     }
-    speakEnglish(val, true);
+    queueSpeakEnglish(val, true);
   }
 
   function getActiveCloudConfig() {
@@ -1039,6 +1077,7 @@
     try {
       const rawData =
         localStorage.getItem(LOCAL_DATA_KEY) ||
+        localStorage.getItem('serene_fib_vocab_data_v7') ||
         localStorage.getItem('serene_fib_vocab_data_v6') ||
         localStorage.getItem('serene_fib_vocab_data_v5') ||
         localStorage.getItem('serene_fib_vocab_data_v4') ||
@@ -1216,21 +1255,20 @@
     const doneCount = validCompleted.length;
 
     const dueCards = userData.cards.filter(c => c.dueDate <= today || isCardLockedToday(c));
-    // 今日未完成題數：包含今日到期/鎖定且尚未列入今日已完成的題數（或已作答未完成數）
     const todoCount = dueCards.filter(c => !validCompleted.includes(c.id)).length;
 
     return { doneCount, todoCount, remainingCount, dueCards };
   }
 
-  // 今日答對率：今日剩餘題數為 0 才計算（今日未完成題數 / 今日已完成題數，以百分比表示）；不為 0 則清空（--%）
   function getConditionalAccuracyText(remainingCount, todoCount, doneCount) {
     if (remainingCount !== 0) {
       return '--%';
     }
-    if (doneCount <= 0) {
+    const totalCount = doneCount + todoCount;
+    if (totalCount <= 0) {
       return '--%';
     }
-    const rate = Math.round((doneCount / (doneCount+todoCount)) * 100);
+    const rate = Math.round((doneCount / totalCount) * 100);
     return `${rate}%`;
   }
 
@@ -1250,11 +1288,11 @@
     document.getElementById('stat-acc-today').textContent = accText;
   }
 
-  function verifyDeletePasscode() {
-    const inputCode = prompt('🔐 刪除確認\n請輸入刪除密碼（4位數）：');
+  function verifyPasscode0000(promptTitle = '🔐 密碼驗證') {
+    const inputCode = prompt(`${promptTitle}\n請輸入密碼（4位數）：`);
     if (inputCode === null) return false;
-    if (inputCode.trim() !== DELETE_PASSCODE) {
-      alert('❌ 密碼錯誤！只有輸入正確密碼才能刪除喔。');
+    if (inputCode.trim() !== PASSCODE_0000) {
+      alert('❌ 密碼錯誤！請輸入正確密碼。');
       return false;
     }
     return true;
@@ -1331,14 +1369,13 @@
       return;
     }
 
-    if (!verifyDeletePasscode()) return;
-
     const cardsInCat = userData.cards.filter(c => c.categoryId === catId);
     const confirmMsg = cardsInCat.length > 0
       ? `確定要刪除「${targetCat.name}」分類嗎？\n⚠️ 此分類內的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原！`
       : `確定要刪除空分類「${targetCat.name}」嗎？`;
 
     if (!confirm(confirmMsg)) return;
+    if (!verifyPasscode0000('🗑️ 刪除分類確認')) return;
 
     const removedCardIds = new Set(cardsInCat.map(c => c.id));
     userData.categories = userData.categories.filter(c => c.id !== catId);
@@ -1408,15 +1445,20 @@
   function removeCardById(cardId, askConfirm = true) {
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return false;
-    if (!verifyDeletePasscode()) return false;
     if (askConfirm && !confirm(`確定要刪除單字卡「${card.en}」嗎？`)) {
       return false;
     }
+    if (!verifyPasscode0000('🗑️ 刪除單字卡確認')) return false;
+
     userData.cards = userData.cards.filter(c => c.id !== cardId);
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== cardId);
     userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => id !== cardId);
     if (lastShownCardId === cardId) lastShownCardId = null;
+    if (activeQuestionSnapshot && activeQuestionSnapshot.id === cardId) {
+      activeQuestionSnapshot = null;
+      isViewingWrongAnswer = false;
+    }
     saveState(true);
     refreshAllUI();
     return true;
@@ -1427,8 +1469,10 @@
   }
 
   function deleteCurrentReviewCardWithPasscode() {
-    if (!currentReviewCardId) return;
-    removeCardById(currentReviewCardId, false);
+    const targetId = activeQuestionSnapshot ? activeQuestionSnapshot.id : null;
+    if (!targetId) return;
+    if (!confirm('🎈🔍 確定要把這張單字卡刪掉嗎？')) return;
+    removeCardById(targetId, false);
   }
 
   function escapeHtml(str) {
@@ -1467,7 +1511,7 @@
       speakBtn.className = 'btn btn-sm btn-secondary';
       speakBtn.style.cssText = 'padding:2px 8px; margin-left:6px;';
       speakBtn.textContent = '🔊';
-      speakBtn.onclick = () => speakEnglish(c.en);
+      speakBtn.onclick = () => queueSpeakEnglish(c.en);
       titleDiv.appendChild(speakBtn);
 
       const lockedNote = isCardLockedToday(c) ? ' ｜ 🔒 今日首答失誤(輪流複習中)' : '';
@@ -1515,6 +1559,7 @@
   }
 
   function renderReviewCard(resetRotation = false) {
+    if (isViewingWrongAnswer) return;
     if (resetRotation) lastShownCardId = null;
 
     const { dueCards } = getTodayCounts();
@@ -1526,7 +1571,7 @@
     const container = document.getElementById('review-container');
 
     if (!filtered.length) {
-      currentReviewCardId = null;
+      activeQuestionSnapshot = null;
       container.innerHTML = `
         <div class="review-card" style="border-color: var(--accent-green);">
           <div style="font-size: 4rem;">🏆🎉🌟</div>
@@ -1538,7 +1583,16 @@
     }
 
     const card = pickNextReviewCard(filtered);
-    currentReviewCardId = card.id;
+    // 建立不可變快照，確保此題作答與答錯顯示解答絕對同一張卡
+    activeQuestionSnapshot = {
+      id: card.id,
+      categoryId: card.categoryId,
+      type: card.type,
+      en: card.en,
+      pos: card.pos,
+      zh: card.zh,
+      fibIndex: card.fibIndex
+    };
     lastShownCardId = card.id;
 
     const stats = normalizeCardStats(card);
@@ -1561,7 +1615,7 @@
     const actionButtonsHtml = (submitBtnClass) => `
       <div class="review-actions-row">
         <button id="submit-ans-btn" class="btn ${submitBtnClass}" style="width:100%;" onclick="submitAnswer()">✨ 送出答案</button>
-        <button id="learned-today-btn" type="button" class="btn btn-green btn-sm" style="width:100%;" onclick="forceLearnCard('${card.id}')">🌟 今天真的學會了（強制進下一階並列入今日完成）</button>
+        <button id="learned-today-btn" type="button" class="btn btn-green btn-sm" style="width:100%;" onclick="confirmAndForceLearnCard('${card.id}')">🌟 今天真的學會了（需密碼 0000）</button>
       </div>
       <div>
         <button type="button" class="subtle-toy-delete" onclick="deleteCurrentReviewCardWithPasscode()">🎈🔍 太簡單了!刪掉!</button>
@@ -1575,7 +1629,7 @@
       }).join('');
 
       container.innerHTML = `
-        <div class="review-card" id="active-review-card">
+        <div class="review-card" id="active-review-card" data-card-id="${escapeHtml(card.id)}">
           ${headerMetaHtml}
           <div id="question-body">
             <div class="prompt-chinese">${escapeHtml(card.zh)}</div>
@@ -1594,7 +1648,7 @@
       setTimeout(() => document.getElementById('ans-en-input')?.focus(), 100);
     } else {
       container.innerHTML = `
-        <div class="review-card" id="active-review-card" style="border-color: var(--accent-pink);">
+        <div class="review-card" id="active-review-card" data-card-id="${escapeHtml(card.id)}" style="border-color: var(--accent-pink);">
           ${headerMetaHtml}
           <div id="question-body">
             <div style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-top:6px;">🎧 聽發音，寫出英文和中文！</div>
@@ -1614,8 +1668,9 @@
           <div id="wrong-answer-stage" style="display:none;"></div>
         </div>
       `;
-      document.getElementById('review-play-audio-btn').onclick = () => speakEnglish(card.en);
-      setTimeout(() => speakEnglish(card.en), 250);
+      const spokenWord = card.en;
+      document.getElementById('review-play-audio-btn').onclick = () => queueSpeakEnglish(spokenWord);
+      queueSpeakEnglish(spokenWord);
     }
   }
 
@@ -1627,7 +1682,17 @@
     });
   }
 
-  function forceLearnCard(cardId) {
+  function confirmAndForceLearnCard(cardId) {
+    const snap = activeQuestionSnapshot && activeQuestionSnapshot.id === cardId
+      ? activeQuestionSnapshot
+      : userData.cards.find(c => c.id === cardId);
+    if (!snap) return;
+
+    if (!confirm(`🌟 確定要將「${snap.en}」標記為「今天真的學會了」，強制進入下一階並列入今日完成嗎？`)) {
+      return;
+    }
+    if (!verifyPasscode0000('🌟 今天真的學會了確認')) return;
+
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return;
 
@@ -1648,12 +1713,20 @@
       userData.dailyLog.answeredTodayIds.push(card.id);
     }
 
+    isViewingWrongAnswer = false;
     saveState(true);
     updateTopCounters();
     renderReviewCard(false);
   }
 
-  function renderWrongAnswerCenterView(card) {
+  function finishWrongAnswerAndGoNext() {
+    isViewingWrongAnswer = false;
+    activeQuestionSnapshot = null;
+    renderReviewCard(false);
+  }
+
+  function renderWrongAnswerCenterView(answerSnapshot) {
+    isViewingWrongAnswer = true;
     const questionBody = document.getElementById('question-body');
     const wrongStage = document.getElementById('wrong-answer-stage');
     if (questionBody) questionBody.style.display = 'none';
@@ -1663,10 +1736,10 @@
     wrongStage.innerHTML = `
       <div class="wrong-center-box">
         <div class="wrong-center-title">📖 正確答案看這裡</div>
-        <div class="wrong-center-en">${escapeHtml(card.en)}</div>
-        <div class="prompt-pos" style="margin-bottom:10px;">詞性：${escapeHtml(card.pos)}</div>
-        <div class="wrong-center-zh">${escapeHtml(card.zh)}</div>
-        <button id="mem-done-btn" type="button" class="btn btn-green" style="width:100%; max-width:320px; font-size:1.15rem;" onclick="renderReviewCard(false)">
+        <div class="wrong-center-en">${escapeHtml(answerSnapshot.en)}</div>
+        <div class="prompt-pos" style="margin-bottom:10px;">詞性：${escapeHtml(answerSnapshot.pos)}</div>
+        <div class="wrong-center-zh">${escapeHtml(answerSnapshot.zh)}</div>
+        <button id="mem-done-btn" type="button" class="btn btn-green" style="width:100%; max-width:320px; font-size:1.15rem;" onclick="finishWrongAnswerAndGoNext()">
           ✅ 已經背好了!
         </button>
       </div>
@@ -1677,8 +1750,10 @@
   async function submitAnswer() {
     const submitBtn = document.getElementById('submit-ans-btn');
     if (submitBtn && submitBtn.disabled) return;
+    if (!activeQuestionSnapshot) return;
 
-    const card = userData.cards.find(c => c.id === currentReviewCardId);
+    const snap = { ...activeQuestionSnapshot };
+    const card = userData.cards.find(c => c.id === snap.id);
     if (!card) return;
 
     syncDailyRollover();
@@ -1687,16 +1762,16 @@
     const enInputEl = document.getElementById('ans-en-input');
     if (!enInputEl) return;
     const enAns = normalizeCompareStr(enInputEl.value);
-    const targetEn = normalizeCompareStr(card.en);
+    const targetEn = normalizeCompareStr(snap.en);
 
     let isCorrect = false;
-    if (card.type === '1') {
+    if (snap.type === '1') {
       isCorrect = (enAns.length > 0 && enAns === targetEn);
     } else {
       const zhInputEl = document.getElementById('ans-zh-input');
       const zhAns = normalizeCompareStr(zhInputEl ? zhInputEl.value : '');
-      const targetZhFull = normalizeCompareStr(card.zh);
-      const validZhList = card.zh
+      const targetZhFull = normalizeCompareStr(snap.zh);
+      const validZhList = snap.zh
         .split(/[,，/、;；]/)
         .map(s => normalizeCompareStr(s))
         .filter(Boolean);
@@ -1734,8 +1809,13 @@
 
       saveState(true);
       updateTopCounters();
-      speakEnglish(card.en);
-      await showFullScreenAnimation(true, 1450);
+
+      // 1. 答對動畫與音效排隊播放完畢，再渲染下一題（下一題若是型態二，語音會自動排在後面）
+      await Promise.all([
+        showFullScreenAnimation(true, 1450),
+        queueHappySound()
+      ]);
+      activeQuestionSnapshot = null;
       renderReviewCard(false);
     } else {
       card.wrongCount = (typeof card.wrongCount === 'number' ? card.wrongCount : 0) + 1;
@@ -1750,9 +1830,16 @@
 
       saveState(true);
       updateTopCounters();
-      await showFullScreenAnimation(false, 1500);
-      speakEnglish(card.en);
-      renderWrongAnswerCenterView(card);
+
+      // 1. 答錯動畫與音效先完整播完
+      await Promise.all([
+        showFullScreenAnimation(false, 1500),
+        queueSadSound()
+      ]);
+
+      // 2. 顯示中央解答卡，並將答錯解答語音排在傷心音效之後
+      renderWrongAnswerCenterView(snap);
+      await queueSpeakEnglish(snap.en);
     }
   }
 
