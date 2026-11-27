@@ -1344,9 +1344,9 @@
     if (!clean) return Promise.resolve();
 
     if (isPreview) {
-      showTemporaryHint(`🔊 正在播放「${clean}」...`, 3500);
+      showTemporaryHint('🔊 正在試聽發音...', 3500);
     } else if (!isAutoPlay) {
-      setReviewAudioStatus(`🔊 正在播放發音：${clean}`);
+      setReviewAudioStatus('🔊 正在播放發音...');
     }
 
     if (!('speechSynthesis' in window)) {
@@ -1388,8 +1388,8 @@
 
         utter.onstart = () => {
           started = true;
-          if (isPreview) showTemporaryHint(`🔊 播放中：${clean}`, 3500);
-          else setReviewAudioStatus(`🔊 播放中：${clean}`);
+          if (isPreview) showTemporaryHint('🔊 試聽播放中...', 3500);
+          else setReviewAudioStatus('🔊 播放中...');
         };
 
         utter.onend = () => {
