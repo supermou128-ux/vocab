@@ -39,7 +39,7 @@
       color: var(--text-main);
     }
 
-    input[type="text"], input[type="password"], select {
+    input[type="text"], input[type="password"], input[type="number"], select {
       width: 100%;
       padding: 13px 16px;
       border: 3px solid #B2EBF2;
@@ -51,7 +51,7 @@
       color: var(--text-main);
     }
 
-    input[type="text"]:focus, input[type="password"]:focus, select:focus {
+    input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus {
       border-color: var(--secondary);
       background: #FFFFFF;
     }
@@ -75,6 +75,11 @@
     .btn:active {
       transform: translateY(3px);
       box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .btn-primary { background: var(--primary); }
@@ -539,6 +544,7 @@
       margin-bottom: 10px;
       border-left: 6px solid var(--secondary);
       gap: 10px;
+      flex-wrap: wrap;
     }
 
     .word-list-item.type2 {
@@ -589,6 +595,53 @@
       padding: 18px;
       margin-bottom: 16px;
     }
+
+    .dup-alert-box {
+      display: none;
+      background: #FFF8E1;
+      border: 3px solid #FFB300;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+
+    .dup-card-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #FFFFFF;
+      border: 2px solid #FFE082;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .edit-card-panel {
+      display: none;
+      background: #E8F5E9;
+      border: 3px solid #43A047;
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .search-box-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
@@ -598,7 +651,7 @@
       <div class="user-info">
         <span>🎈 學習者：Serene</span>
         <span id="sync-status-badge" class="sync-pill">💾 本機儲存</span>
-        <button class="btn btn-sm btn-secondary" onclick="pullFromCloud(true)">🔄 立即同步</button>
+        <button id="top-sync-btn" class="btn btn-sm btn-secondary" onclick="pullFromCloud(true)">🔄 立即同步</button>
       </div>
       <div class="status-badges">
         <div class="badge badge-done">✅ 今日已完成：<span id="today-done-count">0</span></div>
@@ -647,7 +700,7 @@
         <div class="form-group">
           <label>3. 英文單字</label>
           <div style="display:flex; gap:8px;">
-            <input type="text" id="word-en" placeholder="例如：advertisement" />
+            <input type="text" id="word-en" placeholder="例如：advertisement" oninput="checkDuplicateWordLive()" />
             <button class="btn btn-secondary btn-sm" type="button" onclick="previewSpeech()" style="white-space:nowrap;">🔊 試聽</button>
           </div>
           <div id="preview-speech-status" class="speech-status-hint"></div>
@@ -665,6 +718,11 @@
         </div>
       </div>
 
+      <div id="dup-word-alert" class="dup-alert-box">
+        <div style="font-weight:900; color:#E65100; font-size:1.05rem;">⚠️ 發現字庫中已有相同英文單字！</div>
+        <div id="dup-word-list" style="margin-top:6px;"></div>
+      </div>
+
       <div class="form-group">
         <label>5. 中文意思</label>
         <input type="text" id="word-zh" placeholder="例如：廣告" onkeypress="if(event.key==='Enter') addWordCard()" />
@@ -674,21 +732,62 @@
     </div>
 
     <div id="tab-categories" class="tab-panel">
-      <h2 style="margin-top:0; color:var(--accent-purple);">📁 分類管理（每分類上限 1,000 張）</h2>
+      <h2 style="margin-top:0; color:var(--accent-purple);">📁 分類與全字庫搜尋 / 修改（支援 40,000 張）</h2>
+
+      <div class="form-group">
+        <label>🔍 全字庫搜尋（一次比對全部字卡，可查英文或中文）：</label>
+        <div class="search-box-row">
+          <input type="text" id="global-search-input" placeholder="輸入英文或中文關鍵字搜尋全部字卡..." oninput="scheduleGlobalSearch()" />
+          <button class="btn btn-secondary btn-sm" type="button" onclick="clearGlobalSearch()" style="white-space:nowrap;">✖ 清除搜尋</button>
+        </div>
+        <div id="global-search-results"></div>
+      </div>
+
+      <div id="edit-card-panel" class="edit-card-panel">
+        <h3 style="margin-top:0; color:#1B5E20;">✏️ 修改單字卡內容</h3>
+        <input type="hidden" id="edit-card-id" />
+        <div class="grid-2">
+          <div class="form-group">
+            <label>英文單字</label>
+            <input type="text" id="edit-card-en" />
+          </div>
+          <div class="form-group">
+            <label>中文意思</label>
+            <input type="text" id="edit-card-zh" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>出現次數</label>
+            <input type="number" id="edit-card-shown" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label>答錯次數</label>
+            <input type="number" id="edit-card-wrong" min="0" step="1" />
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+          <button class="btn btn-green btn-sm" type="button" onclick="saveEditedCard()">💾 儲存修改</button>
+          <button class="btn btn-yellow btn-sm" type="button" onclick="resetEditedCardStats()">🧹 清除紀錄（出現/答錯歸 0）</button>
+          <button class="btn btn-danger btn-sm" type="button" onclick="closeEditCardPanel()">取消</button>
+        </div>
+      </div>
+
       <div style="display:flex; gap:10px; margin-bottom:20px;">
         <input type="text" id="new-cat-name" placeholder="輸入新分類名稱（例如：動物、學校單字）..." onkeypress="if(event.key==='Enter') addCategory()" />
         <button class="btn btn-purple" onclick="addCategory()" style="white-space:nowrap;">➕ 新增分類</button>
       </div>
 
       <div class="form-group">
-        <label>檢視或刪除分類（刪除分類會一併刪除該分類所有單字卡，需輸入密碼）：</label>
+        <label>檢視或刪除分類（刪除分類會一併刪除該分類所有單字卡，需輸入密碼 0000）：</label>
         <div style="display:flex; gap:10px; align-items:center;">
-          <select id="manage-cat-select" onchange="renderWordList()"></select>
+          <select id="manage-cat-select" onchange="onManageCategoryChange()"></select>
           <button class="btn btn-danger" onclick="deleteSelectedCategory()" style="white-space:nowrap;">🗑️ 刪除此分類</button>
         </div>
       </div>
       <div id="cat-count-info" style="margin-bottom:12px; font-weight:700; color:var(--text-light);"></div>
       <div id="word-list-container"></div>
+      <div id="word-list-pagination" class="pagination-bar"></div>
     </div>
 
     <div id="tab-stats" class="tab-panel">
@@ -723,11 +822,11 @@
     </div>
 
     <div id="tab-sync" class="tab-panel">
-      <h2 style="margin-top:0; color:#33691E;">☁️ iPhone / iPad / 網頁 跨裝置同步設定</h2>
+      <h2 style="margin-top:0; color:#33691E;">☁️ iPhone / iPad / 網頁 跨裝置同步設定（支援 40,000 張自動分批）</h2>
       <div class="sync-box">
         <p style="margin-top:0; line-height:1.6;">
           本程式已固定使用 <strong>Serene</strong> 帳號，開啟網頁即直接進入，不需登入。<br>
-          若未自行輸入金鑰，系統會自動使用預設的 <strong>JSONBin.io</strong> 設定進行同步：
+          支援最高 <strong>40,000 張字卡</strong>，單次請求逾時上限為 <strong>60 秒</strong>，並自動分批上傳與分片本機儲存：
         </p>
         <div class="grid-2">
           <div class="form-group">
@@ -740,9 +839,9 @@
           </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn-green" onclick="saveCloudConfigAndSync()">💾 儲存並立即同步</button>
-          <button class="btn btn-secondary" onclick="pushToCloud(true)">⬆️ 上傳本機到雲端</button>
-          <button class="btn btn-yellow" onclick="pullFromCloud(true)">⬇️ 從雲端下載最新</button>
+          <button id="btn-save-sync" class="btn btn-green" onclick="saveCloudConfigAndSync()">💾 儲存並立即同步</button>
+          <button id="btn-push-cloud" class="btn btn-secondary" onclick="pushToCloud(true)">⬆️ 上傳本機到雲端</button>
+          <button id="btn-pull-cloud" class="btn btn-yellow" onclick="pullFromCloud(true)">⬇️ 從雲端下載最新</button>
         </div>
         <div id="cloud-sync-msg" style="margin-top:12px; font-weight:700; color:#2E7D32;"></div>
       </div>
@@ -752,25 +851,39 @@
 <script>
   const FIXED_USER = 'Serene';
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
-  const MAX_CARDS_PER_CATEGORY = 1000;
+  const MAX_CARDS_PER_CATEGORY = 40000;
   const PASSCODE_0000 = '0000';
-  const LOCAL_DATA_KEY = 'serene_fib_vocab_data_v9';
+  const LOCAL_META_KEY = 'serene_fib_vocab_meta_v12';
+  const LOCAL_CHUNK_PREFIX = 'serene_fib_vocab_chunk_v12_';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
 
   const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
   const DEFAULT_MASTER_KEY = '$2a$10$5KW9GkpwVJbQ16MRT.2vtOmJnDfwsLywrc0H3oSugrl5aQwgHral2';
 
+  const LOCAL_CHUNK_SIZE = 1200;
+  const BATCH_MAX_CARDS = 1500;
+  const BATCH_MAX_BYTES = 380000;
+  const SYNC_TIMEOUT_MS = 60000;
+  const PAGE_SIZE_LIST = 30;
+  const PAGE_SIZE_SEARCH = 30;
+
   let userData = createDefaultUserData();
   let cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
   let activeQuestionSnapshot = null;
+  let questionSeq = 0;
+  let isSubmitting = false;
   let isViewingWrongAnswer = false;
+  let isSyncing = false;
   let lastShownCardId = null;
   let chartInstance = null;
   let preferredVoice = null;
   let hintClearTimer = null;
+  let searchDebounceTimer = null;
   let audioCtx = null;
-
   let audioQueue = Promise.resolve();
+  let duplicateIndexMap = new Map();
+  let currentListPage = 1;
+  let currentSearchPage = 1;
 
   function waitMs(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -827,6 +940,25 @@
 
   function normalizeCompareStr(str) {
     return String(str || '').replace(/\s+/g, '').toLowerCase();
+  }
+
+  function rebuildDuplicateIndex() {
+    const map = new Map();
+    for (let i = 0; i < userData.cards.length; i++) {
+      const c = userData.cards[i];
+      const key = normalizeCompareStr(c.en);
+      if (!key) continue;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(c);
+    }
+    duplicateIndexMap = map;
+  }
+
+  function findCardsByExactEnglish(enText) {
+    const key = normalizeCompareStr(enText);
+    if (!key) return [];
+    const list = duplicateIndexMap.get(key);
+    return Array.isArray(list) ? list.slice() : [];
   }
 
   function normalizeCardStats(card) {
@@ -1043,8 +1175,15 @@
     });
   }
 
-  function queueSpeakEnglish(text, isPreview = false) {
-    return enqueueAudioTask(() => speakEnglishNow(text, isPreview));
+  function queueSpeakEnglish(text, isPreview = false, expectedSeq = null) {
+    const targetText = String(text || '').trim();
+    if (!targetText) return Promise.resolve();
+    return enqueueAudioTask(async () => {
+      if (!isPreview && expectedSeq !== null && expectedSeq !== questionSeq) {
+        return;
+      }
+      await speakEnglishNow(targetText, isPreview);
+    });
   }
 
   function previewSpeech() {
@@ -1064,6 +1203,103 @@
     return { binId, apiKey };
   }
 
+  function cleanupOldLocalChunks(keepCount = 0) {
+    try {
+      for (let i = keepCount; i < 200; i++) {
+        const key = `${LOCAL_CHUNK_PREFIX}${i}`;
+        if (localStorage.getItem(key) !== null) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {}
+  }
+
+  function writeLocalStateChunked() {
+    const cards = Array.isArray(userData.cards) ? userData.cards : [];
+    const chunkCount = Math.max(1, Math.ceil(cards.length / LOCAL_CHUNK_SIZE));
+    let writtenChunks = 0;
+
+    for (let i = 0; i < chunkCount; i++) {
+      const slice = cards.slice(i * LOCAL_CHUNK_SIZE, (i + 1) * LOCAL_CHUNK_SIZE);
+      try {
+        localStorage.setItem(`${LOCAL_CHUNK_PREFIX}${i}`, JSON.stringify(slice));
+        writtenChunks++;
+      } catch (e) {
+        cleanupOldLocalChunks(writtenChunks);
+        return false;
+      }
+    }
+
+    cleanupOldLocalChunks(writtenChunks);
+
+    const metaPayload = {
+      userName: FIXED_USER,
+      updatedAt: userData.updatedAt,
+      categories: userData.categories,
+      dailyLog: userData.dailyLog,
+      chunkCount: writtenChunks,
+      totalCards: cards.length
+    };
+
+    try {
+      localStorage.setItem(LOCAL_META_KEY, JSON.stringify(metaPayload));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function readLocalStateChunked() {
+    try {
+      const rawMeta = localStorage.getItem(LOCAL_META_KEY);
+      if (rawMeta) {
+        const meta = JSON.parse(rawMeta);
+        const chunkCount = typeof meta.chunkCount === 'number' ? meta.chunkCount : 0;
+        const assembledCards = [];
+        for (let i = 0; i < chunkCount; i++) {
+          const rawChunk = localStorage.getItem(`${LOCAL_CHUNK_PREFIX}${i}`);
+          if (rawChunk) {
+            const arr = JSON.parse(rawChunk);
+            if (Array.isArray(arr)) {
+              for (let j = 0; j < arr.length; j++) {
+                assembledCards.push(arr[j]);
+              }
+            }
+          }
+        }
+        return {
+          ...createDefaultUserData(),
+          ...meta,
+          cards: assembledCards,
+          userName: FIXED_USER
+        };
+      }
+    } catch (e) {}
+
+    const legacyKeys = [
+      'serene_fib_vocab_data_v11',
+      'serene_fib_vocab_data_v10',
+      'serene_fib_vocab_data_v9',
+      'serene_fib_vocab_data_v8',
+      'serene_fib_vocab_data_v7',
+      'serene_fib_vocab_data_v6',
+      'serene_fib_vocab_data_v5',
+      'serene_fib_vocab_data_v4',
+      'serene_fib_vocab_data_v3',
+      'serene_fib_vocab_data_v2'
+    ];
+    for (let i = 0; i < legacyKeys.length; i++) {
+      try {
+        const rawData = localStorage.getItem(legacyKeys[i]);
+        if (rawData) {
+          const parsed = JSON.parse(rawData);
+          return { ...createDefaultUserData(), ...parsed, userName: FIXED_USER };
+        }
+      } catch (e) {}
+    }
+    return null;
+  }
+
   function loadLocalState() {
     try {
       const rawCfg = localStorage.getItem(CLOUD_CFG_KEY) || localStorage.getItem('serene_fib_vocab_cloud_cfg_v1');
@@ -1080,22 +1316,12 @@
       cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
     }
 
-    try {
-      const rawData =
-        localStorage.getItem(LOCAL_DATA_KEY) ||
-        localStorage.getItem('serene_fib_vocab_data_v8') ||
-        localStorage.getItem('serene_fib_vocab_data_v7') ||
-        localStorage.getItem('serene_fib_vocab_data_v6') ||
-        localStorage.getItem('serene_fib_vocab_data_v5') ||
-        localStorage.getItem('serene_fib_vocab_data_v4') ||
-        localStorage.getItem('serene_fib_vocab_data_v3') ||
-        localStorage.getItem('serene_fib_vocab_data_v2');
-      if (rawData) {
-        const parsed = JSON.parse(rawData);
-        userData = { ...createDefaultUserData(), ...parsed, userName: FIXED_USER };
-      }
-    } catch (e) {}
+    const loaded = readLocalStateChunked();
+    if (loaded) {
+      userData = loaded;
+    }
 
+    rebuildDuplicateIndex();
     const activeCfg = getActiveCloudConfig();
     document.getElementById('cloud-bin-id').value = activeCfg.binId;
     document.getElementById('cloud-api-key').value = activeCfg.apiKey;
@@ -1107,9 +1333,20 @@
     if (badge) badge.textContent = text;
   }
 
-  function saveState(syncCloud = true) {
+  function setSyncButtonsDisabled(disabled) {
+    ['top-sync-btn', 'btn-save-sync', 'btn-push-cloud', 'btn-pull-cloud'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = disabled;
+    });
+  }
+
+  function saveState(syncCloud = false) {
+    rebuildDuplicateIndex();
     userData.updatedAt = Date.now();
-    localStorage.setItem(LOCAL_DATA_KEY, JSON.stringify(userData));
+    const ok = writeLocalStateChunked();
+    if (!ok) {
+      updateSyncBadge('⚠️ 本機容量受限');
+    }
     if (syncCloud) {
       pushToCloud(false);
     }
@@ -1124,12 +1361,14 @@
     };
     document.getElementById('cloud-bin-id').value = cloudConfig.binId;
     document.getElementById('cloud-api-key').value = cloudConfig.apiKey;
-    localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudConfig));
+    try {
+      localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudConfig));
+    } catch (e) {}
     updateSyncBadge('☁️ 已啟用雲端同步');
     pullFromCloud(true);
   }
 
-  async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  async function fetchWithTimeout(url, options = {}, timeoutMs = SYNC_TIMEOUT_MS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -1139,42 +1378,127 @@
     }
   }
 
+  function buildUploadChunks(fullData) {
+    const cards = Array.isArray(fullData.cards) ? fullData.cards : [];
+    const batchId = 'batch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    const metaBase = {
+      userName: FIXED_USER,
+      updatedAt: fullData.updatedAt || Date.now(),
+      categories: fullData.categories,
+      dailyLog: fullData.dailyLog,
+      totalCards: cards.length
+    };
+
+    const chunks = [];
+    let currentCards = [];
+    let currentBytes = JSON.stringify(metaBase).length;
+
+    for (let i = 0; i < cards.length; i++) {
+      const c = cards[i];
+      const cBytes = JSON.stringify(c).length + 2;
+      if (
+        currentCards.length > 0 &&
+        (currentCards.length >= BATCH_MAX_CARDS || currentBytes + cBytes > BATCH_MAX_BYTES)
+      ) {
+        chunks.push(currentCards);
+        currentCards = [];
+        currentBytes = JSON.stringify(metaBase).length;
+      }
+      currentCards.push(c);
+      currentBytes += cBytes;
+    }
+    if (currentCards.length > 0 || chunks.length === 0) {
+      chunks.push(currentCards);
+    }
+
+    const totalChunks = chunks.length;
+    return chunks.map((chunkCards, idx) => ({
+      syncMeta: {
+        batchId,
+        chunkIndex: idx,
+        totalChunks,
+        totalCards: cards.length,
+        updatedAt: metaBase.updatedAt
+      },
+      userName: FIXED_USER,
+      updatedAt: metaBase.updatedAt,
+      categories: metaBase.categories,
+      cards: chunkCards,
+      dailyLog: metaBase.dailyLog
+    }));
+  }
+
   async function pushToCloud(showNotice = false) {
+    if (isSyncing) return;
+    isSyncing = true;
+    setSyncButtonsDisabled(true);
+
     const { binId, apiKey } = getActiveCloudConfig();
     const msgEl = document.getElementById('cloud-sync-msg');
     try {
-      updateSyncBadge('☁️ 上傳中...');
-      const res = await fetchWithTimeout(`https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': apiKey
-        },
-        body: JSON.stringify(userData)
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const payloads = buildUploadChunks(userData);
+      const totalChunks = payloads.length;
+
+      for (let i = 0; i < totalChunks; i++) {
+        updateSyncBadge(`☁️ 上傳中 (${i + 1}/${totalChunks})...`);
+        if (showNotice && msgEl) {
+          msgEl.textContent = `⏳ 正在分批上傳第 ${i + 1} / ${totalChunks} 批（共 ${userData.cards.length} 張字卡，單批最長等候 60 秒）...`;
+        }
+        const res = await fetchWithTimeout(
+          `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Master-Key': apiKey
+            },
+            body: JSON.stringify(payloads[i])
+          },
+          SYNC_TIMEOUT_MS
+        );
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        if (i < totalChunks - 1) {
+          await waitMs(180);
+        }
+      }
+
       updateSyncBadge('☁️ 雲端已同步');
-      if (showNotice && msgEl) msgEl.textContent = '✅ 已成功將 Serene 的資料上傳至雲端！';
+      if (showNotice && msgEl) {
+        msgEl.textContent = `✅ 已完成分批上傳（共 ${totalChunks} 批、${userData.cards.length} 張字卡）！`;
+      }
     } catch (e) {
       updateSyncBadge('⚠️ 同步失敗');
       if (showNotice && msgEl) {
         msgEl.textContent = e.name === 'AbortError'
-          ? '⚠️ 上傳逾時（超過 8 秒無回應），請檢查網路或金鑰。'
-          : '⚠️ 上傳失敗，請檢查 Bin ID 與 Master Key 是否正確。';
+          ? '⚠️ 上傳逾時（已超過 60 秒），目前本機資料已安全保留。'
+          : '⚠️ 上傳失敗，目前本機資料已安全保留，請檢查 Bin ID 與 Master Key。';
       }
+    } finally {
+      isSyncing = false;
+      setSyncButtonsDisabled(false);
     }
   }
 
   async function pullFromCloud(showNotice = false) {
+    if (isSyncing) return;
+    isSyncing = true;
+    setSyncButtonsDisabled(true);
+
     const { binId, apiKey } = getActiveCloudConfig();
     const msgEl = document.getElementById('cloud-sync-msg');
     try {
       updateSyncBadge('☁️ 下載中...');
-      const res = await fetchWithTimeout(`https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`, {
-        headers: {
-          'X-Master-Key': apiKey
-        }
-      });
+      if (showNotice && msgEl) msgEl.textContent = '⏳ 正在從雲端讀取資料（最長等候 60 秒）...';
+
+      const res = await fetchWithTimeout(
+        `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`,
+        {
+          headers: {
+            'X-Master-Key': apiKey
+          }
+        },
+        SYNC_TIMEOUT_MS
+      );
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const json = await res.json();
       const remoteData = json && json.record ? json.record : null;
@@ -1185,15 +1509,21 @@
           if (!Array.isArray(userData.categories) || userData.categories.length === 0) {
             userData.categories = [{ id: 'cat_default', name: '基礎單字' }];
           }
-          localStorage.setItem(LOCAL_DATA_KEY, JSON.stringify(userData));
+          rebuildDuplicateIndex();
+          writeLocalStateChunked();
           syncDailyRollover();
           refreshAllUI();
         } else {
+          isSyncing = false;
+          setSyncButtonsDisabled(false);
           await pushToCloud(false);
+          return;
         }
         updateSyncBadge('☁️ 雲端已同步');
         if (showNotice && msgEl) msgEl.textContent = '✅ 已同步最新雲端資料（Serene）！';
       } else {
+        isSyncing = false;
+        setSyncButtonsDisabled(false);
         await pushToCloud(false);
         updateSyncBadge('☁️ 雲端已同步');
         if (showNotice && msgEl) msgEl.textContent = '✅ 雲端尚未建立資料格式，已自動將本機資料初始化上傳！';
@@ -1202,9 +1532,12 @@
       updateSyncBadge('⚠️ 同步失敗');
       if (showNotice && msgEl) {
         msgEl.textContent = e.name === 'AbortError'
-          ? '⚠️ 下載逾時（超過 8 秒無回應），請檢查網路連線或金鑰。'
-          : '⚠️ 雲端讀取失敗，請確認 Bin ID 與 Master Key 是否正確。';
+          ? '⚠️ 下載逾時（已超過 60 秒），目前本機資料已安全保留。'
+          : '⚠️ 雲端讀取失敗，目前本機資料已安全保留，請確認 Bin ID 與 Master Key。';
       }
+    } finally {
+      isSyncing = false;
+      setSyncButtonsDisabled(false);
     }
   }
 
@@ -1224,7 +1557,7 @@
           delete c.lockedDate;
         }
       });
-      saveState(true);
+      saveState(false);
     } else {
       if (!Array.isArray(userData.dailyLog.completedIds)) userData.dailyLog.completedIds = [];
       if (!Array.isArray(userData.dailyLog.failedTodayIds)) userData.dailyLog.failedTodayIds = [];
@@ -1249,21 +1582,40 @@
   function getTodayCounts() {
     syncDailyRollover();
     const today = getLogicalDateStr();
+    const completedSet = new Set(userData.dailyLog.completedIds);
+    const failedSet = new Set(userData.dailyLog.failedTodayIds);
+    const answeredSet = new Set(userData.dailyLog.answeredTodayIds);
 
-    const scheduledOrNewTodayCards = userData.cards.filter(c =>
-      c.dueDate <= today || c.createdAt === today || isCardLockedToday(c)
-    );
-    const answeredTodayCount = scheduledOrNewTodayCards.filter(c => hasCardBeenAnsweredToday(c.id)).length;
-    const remainingCount = Math.max(0, scheduledOrNewTodayCards.length - answeredTodayCount);
+    const dueCards = [];
+    let scheduledOrNewTodayCount = 0;
+    let answeredTodayCount = 0;
 
-    const validCompleted = userData.dailyLog.completedIds.filter(id =>
-      userData.cards.some(c => c.id === id)
-    );
-    const doneCount = validCompleted.length;
+    for (let i = 0; i < userData.cards.length; i++) {
+      const c = userData.cards[i];
+      const locked = c.lockedDate === today || failedSet.has(c.id);
+      const isDue = c.dueDate <= today || locked;
+      if (isDue) {
+        dueCards.push(c);
+      }
+      if (isDue || c.createdAt === today) {
+        scheduledOrNewTodayCount++;
+        if (answeredSet.has(c.id)) {
+          answeredTodayCount++;
+        }
+      }
+    }
 
-    const dueCards = userData.cards.filter(c => c.dueDate <= today || isCardLockedToday(c));
-    const todoCount = dueCards.filter(c => !validCompleted.includes(c.id)).length;
+    let doneCount = 0;
+    let todoCount = 0;
+    for (let i = 0; i < dueCards.length; i++) {
+      if (completedSet.has(dueCards[i].id)) {
+        doneCount++;
+      } else {
+        todoCount++;
+      }
+    }
 
+    const remainingCount = Math.max(0, scheduledOrNewTodayCount - answeredTodayCount);
     return { doneCount, todoCount, remainingCount, dueCards };
   }
 
@@ -1327,12 +1679,18 @@
     const prevManageVal = manageCat.value;
     const prevWordVal = wordCat.value;
 
+    const countByCat = new Map();
+    for (let i = 0; i < userData.cards.length; i++) {
+      const cid = userData.cards[i].categoryId;
+      countByCat.set(cid, (countByCat.get(cid) || 0) + 1);
+    }
+
     wordCat.innerHTML = '';
     manageCat.innerHTML = '';
     reviewFilter.innerHTML = '<option value="ALL">全部類別一起複習</option>';
 
     userData.categories.forEach(cat => {
-      const count = userData.cards.filter(c => c.categoryId === cat.id).length;
+      const count = countByCat.get(cat.id) || 0;
       wordCat.add(new Option(`${cat.name} (${count}/${MAX_CARDS_PER_CATEGORY})`, cat.id));
       manageCat.add(new Option(`${cat.name} (${count}/${MAX_CARDS_PER_CATEGORY})`, cat.id));
       reviewFilter.add(new Option(`${cat.name}`, cat.id));
@@ -1359,8 +1717,9 @@
     }
     const newCat = { id: 'cat_' + Date.now(), name };
     userData.categories.push(newCat);
-    saveState(true);
+    saveState(false);
     input.value = '';
+    currentListPage = 1;
     populateCategorySelects();
     document.getElementById('manage-cat-select').value = newCat.id;
     renderWordList();
@@ -1391,9 +1750,118 @@
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => !removedCardIds.has(id));
     userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => !removedCardIds.has(id));
 
-    saveState(true);
+    currentListPage = 1;
+    saveState(false);
     refreshAllUI();
     alert(`🗑️ 已刪除分類「${targetCat.name}」及其底下 ${cardsInCat.length} 張單字卡。`);
+  }
+
+  function openEditCardPanel(cardId) {
+    const card = userData.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    switchTab('categories');
+    const manageCat = document.getElementById('manage-cat-select');
+    if (manageCat && [...manageCat.options].some(o => o.value === card.categoryId)) {
+      manageCat.value = card.categoryId;
+      currentListPage = 1;
+      renderWordList();
+    }
+
+    const stats = normalizeCardStats(card);
+    document.getElementById('edit-card-id').value = card.id;
+    document.getElementById('edit-card-en').value = card.en;
+    document.getElementById('edit-card-zh').value = card.zh;
+    document.getElementById('edit-card-shown').value = stats.shownCount;
+    document.getElementById('edit-card-wrong').value = stats.wrongCount;
+
+    const panel = document.getElementById('edit-card-panel');
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closeEditCardPanel() {
+    document.getElementById('edit-card-id').value = '';
+    document.getElementById('edit-card-panel').style.display = 'none';
+  }
+
+  function resetEditedCardStats() {
+    document.getElementById('edit-card-shown').value = 0;
+    document.getElementById('edit-card-wrong').value = 0;
+  }
+
+  function saveEditedCard() {
+    const cardId = document.getElementById('edit-card-id').value;
+    const card = userData.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    const newEn = document.getElementById('edit-card-en').value.trim();
+    const newZh = document.getElementById('edit-card-zh').value.trim();
+    const rawShown = parseInt(document.getElementById('edit-card-shown').value, 10);
+    const rawWrong = parseInt(document.getElementById('edit-card-wrong').value, 10);
+
+    if (!newEn || !newZh) {
+      alert('英文單字與中文意思不能空白喔！');
+      return;
+    }
+
+    const nextShown = Number.isNaN(rawShown) || rawShown < 0 ? 0 : rawShown;
+    const nextWrong = Number.isNaN(rawWrong) || rawWrong < 0 ? 0 : rawWrong;
+
+    card.en = newEn;
+    card.zh = newZh;
+    card.shownCount = nextShown;
+    card.wrongCount = nextWrong;
+
+    if (nextWrong === 0) {
+      delete card.lockedDate;
+      userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== card.id);
+    }
+
+    if (activeQuestionSnapshot && activeQuestionSnapshot.id === card.id) {
+      activeQuestionSnapshot.en = newEn;
+      activeQuestionSnapshot.zh = newZh;
+    }
+
+    saveState(false);
+    refreshAllUI();
+    runGlobalSearch(currentSearchPage);
+    closeEditCardPanel();
+    alert(`✅ 已更新單字卡「${newEn}」！`);
+  }
+
+  function checkDuplicateWordLive() {
+    const enVal = document.getElementById('word-en').value.trim();
+    const alertBox = document.getElementById('dup-word-alert');
+    const listBox = document.getElementById('dup-word-list');
+
+    if (!enVal) {
+      alertBox.style.display = 'none';
+      listBox.innerHTML = '';
+      return;
+    }
+
+    const matches = findCardsByExactEnglish(enVal);
+    if (!matches.length) {
+      alertBox.style.display = 'none';
+      listBox.innerHTML = '';
+      return;
+    }
+
+    alertBox.style.display = 'block';
+    listBox.innerHTML = matches.map(m => {
+      const catName = userData.categories.find(c => c.id === m.categoryId)?.name || '未分類';
+      const typeLabel = m.type === '2' ? '型態二(聽音寫英中)' : '型態一(中文拼英文)';
+      return `
+        <div class="dup-card-row">
+          <div>
+            <strong>${escapeHtml(m.en)}</strong> (${escapeHtml(m.pos)}) — ${escapeHtml(m.zh)}
+            <span style="color:var(--text-light); font-size:0.86rem;"> ｜ 分類：${escapeHtml(catName)} ｜ ${typeLabel}</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" onclick="openEditCardPanel('${m.id}')">✏️ 前往修改</button>
+        </div>
+      `;
+    }).join('');
   }
 
   function addWordCard() {
@@ -1410,6 +1878,17 @@
     if (!en || !zh) {
       alert('請完整填寫英文單字與中文意思喔！');
       return;
+    }
+
+    const existingMatches = findCardsByExactEnglish(en);
+    if (existingMatches.length > 0) {
+      const goEdit = confirm(
+        `字庫中已經有 ${existingMatches.length} 張「${en}」的單字卡囉！\n要改去修改現有字卡嗎？\n（按「確定」前往修改；按「取消」仍可繼續新增）`
+      );
+      if (goEdit) {
+        openEditCardPanel(existingMatches[0].id);
+        return;
+      }
     }
 
     const typesToCreate = selectedType === 'BOTH' ? ['1', '2'] : [selectedType];
@@ -1436,9 +1915,10 @@
       });
     });
 
-    saveState(true);
+    saveState(false);
     document.getElementById('word-en').value = '';
     document.getElementById('word-zh').value = '';
+    document.getElementById('dup-word-alert').style.display = 'none';
     setPreviewHint('');
     refreshAllUI();
 
@@ -1447,6 +1927,84 @@
     } else {
       alert(`🎉 成功加入「${en}」！已列入今日狀態 0 複習清單。`);
     }
+  }
+
+  function scheduleGlobalSearch() {
+    currentSearchPage = 1;
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      runGlobalSearch(1);
+    }, 120);
+  }
+
+  function clearGlobalSearch() {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    currentSearchPage = 1;
+    document.getElementById('global-search-input').value = '';
+    document.getElementById('global-search-results').innerHTML = '';
+  }
+
+  function runGlobalSearch(targetPage = 1) {
+    const rawQ = document.getElementById('global-search-input').value.trim().toLowerCase();
+    const resBox = document.getElementById('global-search-results');
+    if (!rawQ) {
+      resBox.innerHTML = '';
+      return;
+    }
+
+    // 一次比對全部字卡
+    const matches = [];
+    for (let i = 0; i < userData.cards.length; i++) {
+      const c = userData.cards[i];
+      if (
+        (c.en && c.en.toLowerCase().includes(rawQ)) ||
+        (c.zh && c.zh.toLowerCase().includes(rawQ))
+      ) {
+        matches.push(c);
+      }
+    }
+
+    if (!matches.length) {
+      resBox.innerHTML = `<div style="padding:10px; color:var(--text-light); font-weight:700;">找不到符合「${escapeHtml(rawQ)}」的單字卡。</div>`;
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(matches.length / PAGE_SIZE_SEARCH));
+    currentSearchPage = Math.min(Math.max(1, targetPage), totalPages);
+    const startIdx = (currentSearchPage - 1) * PAGE_SIZE_SEARCH;
+    const shownList = matches.slice(startIdx, startIdx + PAGE_SIZE_SEARCH);
+
+    const summaryHtml = `<div style="font-size:0.88rem; color:var(--text-light); margin-bottom:8px; font-weight:700;">共搜尋全部 ${userData.cards.length} 張字卡，找到 ${matches.length} 筆（第 ${currentSearchPage} / ${totalPages} 頁）：</div>`;
+
+    const itemsHtml = shownList.map(c => {
+      const catName = userData.categories.find(cat => cat.id === c.categoryId)?.name || '未分類';
+      const stats = normalizeCardStats(c);
+      const typeTag = c.type === '2' ? '🎧 型態二' : '📝 型態一';
+      return `
+        <div class="word-list-item ${c.type === '2' ? 'type2' : ''}">
+          <div>
+            <strong>${escapeHtml(c.en)}</strong> (${escapeHtml(c.pos)}) — ${escapeHtml(c.zh)}
+            <div style="font-size:0.84rem; color:var(--text-light); margin-top:2px;">
+              📁 ${escapeHtml(catName)} ｜ ${typeTag} ｜ 出現 ${stats.shownCount} 次 / 錯 ${stats.wrongCount} 次
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-sm btn-green" onclick="openEditCardPanel('${c.id}')">✏️ 修改</button>
+            <button type="button" class="btn btn-sm btn-pink" onclick="deleteCard('${c.id}')">刪除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const pagerHtml = totalPages > 1 ? `
+      <div class="pagination-bar">
+        <button type="button" class="btn btn-sm btn-secondary" ${currentSearchPage <= 1 ? 'disabled' : ''} onclick="runGlobalSearch(${currentSearchPage - 1})">◀ 上一頁</button>
+        <span style="font-weight:700; font-size:0.9rem;">第 ${currentSearchPage} / ${totalPages} 頁</span>
+        <button type="button" class="btn btn-sm btn-secondary" ${currentSearchPage >= totalPages ? 'disabled' : ''} onclick="runGlobalSearch(${currentSearchPage + 1})">下一頁 ▶</button>
+      </div>
+    ` : '';
+
+    resBox.innerHTML = summaryHtml + itemsHtml + pagerHtml;
   }
 
   function removeCardById(cardId, askConfirm = true) {
@@ -1465,9 +2023,12 @@
     if (activeQuestionSnapshot && activeQuestionSnapshot.id === cardId) {
       activeQuestionSnapshot = null;
       isViewingWrongAnswer = false;
+      isSubmitting = false;
+      questionSeq += 1;
     }
-    saveState(true);
+    saveState(false);
     refreshAllUI();
+    runGlobalSearch(currentSearchPage);
     return true;
   }
 
@@ -1490,9 +2051,20 @@
       .replace(/"/g, '&quot;');
   }
 
+  function onManageCategoryChange() {
+    currentListPage = 1;
+    renderWordList();
+  }
+
+  function goToWordListPage(page) {
+    currentListPage = Math.max(1, page);
+    renderWordList();
+  }
+
   function renderWordList() {
     const catId = document.getElementById('manage-cat-select').value;
     const container = document.getElementById('word-list-container');
+    const pager = document.getElementById('word-list-pagination');
     const info = document.getElementById('cat-count-info');
     const cards = userData.cards.filter(c => c.categoryId === catId);
 
@@ -1500,11 +2072,17 @@
 
     if (!cards.length) {
       container.innerHTML = `<p style="text-align:center; color:var(--text-light); padding:20px;">這個分類還沒有單字喔，快去新增吧！</p>`;
+      pager.innerHTML = '';
       return;
     }
 
+    const totalPages = Math.max(1, Math.ceil(cards.length / PAGE_SIZE_LIST));
+    if (currentListPage > totalPages) currentListPage = totalPages;
+    const startIdx = (currentListPage - 1) * PAGE_SIZE_LIST;
+    const shownCards = cards.slice(startIdx, startIdx + PAGE_SIZE_LIST);
+
     container.innerHTML = '';
-    cards.forEach(c => {
+    shownCards.forEach(c => {
       const item = document.createElement('div');
       item.className = `word-list-item ${c.type === '2' ? 'type2' : ''}`;
 
@@ -1518,7 +2096,7 @@
       speakBtn.className = 'btn btn-sm btn-secondary';
       speakBtn.style.cssText = 'padding:2px 8px; margin-left:6px;';
       speakBtn.textContent = '🔊';
-      speakBtn.onclick = () => queueSpeakEnglish(c.en);
+      speakBtn.onclick = () => queueSpeakEnglish(c.en, true);
       titleDiv.appendChild(speakBtn);
 
       const lockedNote = isCardLockedToday(c) ? ' ｜ 🔒 今日首答失誤(輪流複習中)' : '';
@@ -1529,15 +2107,32 @@
       leftDiv.appendChild(titleDiv);
       leftDiv.appendChild(metaDiv);
 
+      const rightBtns = document.createElement('div');
+      rightBtns.style.cssText = 'display:flex; gap:8px;';
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn-sm btn-green';
+      editBtn.textContent = '修改';
+      editBtn.onclick = () => openEditCardPanel(c.id);
+
       const delBtn = document.createElement('button');
       delBtn.className = 'btn btn-sm btn-pink';
       delBtn.textContent = '刪除';
       delBtn.onclick = () => deleteCard(c.id);
 
+      rightBtns.appendChild(editBtn);
+      rightBtns.appendChild(delBtn);
+
       item.appendChild(leftDiv);
-      item.appendChild(delBtn);
+      item.appendChild(rightBtns);
       container.appendChild(item);
     });
+
+    pager.innerHTML = totalPages > 1 ? `
+      <button type="button" class="btn btn-sm btn-secondary" ${currentListPage <= 1 ? 'disabled' : ''} onclick="goToWordListPage(${currentListPage - 1})">◀ 上一頁</button>
+      <span style="font-weight:700;">第 ${currentListPage} / ${totalPages} 頁（每頁 ${PAGE_SIZE_LIST} 張）</span>
+      <button type="button" class="btn btn-sm btn-secondary" ${currentListPage >= totalPages ? 'disabled' : ''} onclick="goToWordListPage(${currentListPage + 1})">下一頁 ▶</button>
+    ` : '';
   }
 
   function pickNextReviewCard(filteredCards) {
@@ -1566,7 +2161,7 @@
   }
 
   function renderReviewCard(resetRotation = false) {
-    if (isViewingWrongAnswer) return;
+    if (isSubmitting || isViewingWrongAnswer) return;
     if (resetRotation) lastShownCardId = null;
 
     const { dueCards } = getTodayCounts();
@@ -1579,6 +2174,7 @@
 
     if (!filtered.length) {
       activeQuestionSnapshot = null;
+      questionSeq += 1;
       container.innerHTML = `
         <div class="review-card" style="border-color: var(--accent-green);">
           <div style="font-size: 4rem;">🏆🎉🌟</div>
@@ -1590,7 +2186,10 @@
     }
 
     const card = pickNextReviewCard(filtered);
+    const seq = ++questionSeq;
+
     activeQuestionSnapshot = {
+      seq,
       id: card.id,
       categoryId: card.categoryId,
       type: card.type,
@@ -1620,7 +2219,7 @@
 
     const actionButtonsHtml = (submitBtnClass) => `
       <div class="review-actions-row">
-        <button id="submit-ans-btn" class="btn ${submitBtnClass}" style="width:100%;" onclick="submitAnswer()">✨ 送出答案</button>
+        <button id="submit-ans-btn" class="btn ${submitBtnClass}" style="width:100%;" onclick="submitAnswer(${seq})">✨ 送出答案</button>
       </div>
       <div class="subtle-aux-row">
         <button type="button" class="subtle-toy-action" onclick="confirmAndForceLearnCard('${card.id}')">🌟 今天真的學會!</button>
@@ -1635,7 +2234,7 @@
       }).join('');
 
       container.innerHTML = `
-        <div class="review-card" id="active-review-card" data-card-id="${escapeHtml(card.id)}">
+        <div class="review-card" id="active-review-card" data-card-id="${escapeHtml(card.id)}" data-seq="${seq}">
           ${headerMetaHtml}
           <div id="question-body">
             <div class="prompt-chinese">${escapeHtml(card.zh)}</div>
@@ -1644,17 +2243,22 @@
             <div class="letter-slots" id="letter-slots-box">${slotsHtml}</div>
             <div class="form-group" style="max-width:360px; margin:0 auto 16px;">
               <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer()" />
+                placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer(${seq})" />
             </div>
             ${actionButtonsHtml('btn-primary')}
           </div>
           <div id="wrong-answer-stage" style="display:none;"></div>
         </div>
       `;
-      setTimeout(() => document.getElementById('ans-en-input')?.focus(), 100);
+      setTimeout(() => {
+        if (seq === questionSeq) {
+          document.getElementById('ans-en-input')?.focus();
+        }
+      }, 100);
     } else {
+      const spokenWord = card.en;
       container.innerHTML = `
-        <div class="review-card" id="active-review-card" data-card-id="${escapeHtml(card.id)}" style="border-color: var(--accent-pink);">
+        <div class="review-card" id="active-review-card" data-card-id="${escapeHtml(card.id)}" data-seq="${seq}" style="border-color: var(--accent-pink);">
           ${headerMetaHtml}
           <div id="question-body">
             <div style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-top:6px;">🎧 聽發音，寫出英文和中文！</div>
@@ -1667,16 +2271,15 @@
             </div>
             <div class="form-group" style="max-width:380px; margin:0 auto 16px;">
               <label>中文意思：</label>
-              <input type="text" id="ans-zh-input" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer()" />
+              <input type="text" id="ans-zh-input" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer(${seq})" />
             </div>
             ${actionButtonsHtml('btn-pink')}
           </div>
           <div id="wrong-answer-stage" style="display:none;"></div>
         </div>
       `;
-      const spokenWord = card.en;
-      document.getElementById('review-play-audio-btn').onclick = () => queueSpeakEnglish(spokenWord);
-      queueSpeakEnglish(spokenWord);
+      document.getElementById('review-play-audio-btn').onclick = () => queueSpeakEnglish(spokenWord, false, seq);
+      queueSpeakEnglish(spokenWord, false, seq);
     }
   }
 
@@ -1720,13 +2323,15 @@
     }
 
     isViewingWrongAnswer = false;
-    saveState(true);
+    isSubmitting = false;
+    saveState(false);
     updateTopCounters();
     renderReviewCard(false);
   }
 
   function finishWrongAnswerAndGoNext() {
     isViewingWrongAnswer = false;
+    isSubmitting = false;
     activeQuestionSnapshot = null;
     renderReviewCard(false);
   }
@@ -1753,96 +2358,107 @@
     setTimeout(() => document.getElementById('mem-done-btn')?.focus(), 80);
   }
 
-  async function submitAnswer() {
+  async function submitAnswer(expectedSeq = null) {
+    if (isSubmitting) return;
+    if (!activeQuestionSnapshot) return;
+    if (expectedSeq !== null && expectedSeq !== activeQuestionSnapshot.seq) return;
+
     const submitBtn = document.getElementById('submit-ans-btn');
     if (submitBtn && submitBtn.disabled) return;
-    if (!activeQuestionSnapshot) return;
 
-    const snap = { ...activeQuestionSnapshot };
-    const card = userData.cards.find(c => c.id === snap.id);
-    if (!card) return;
-
-    syncDailyRollover();
-    const today = getLogicalDateStr();
-
-    const enInputEl = document.getElementById('ans-en-input');
-    if (!enInputEl) return;
-    const enAns = normalizeCompareStr(enInputEl.value);
-    const targetEn = normalizeCompareStr(snap.en);
-
-    let isCorrect = false;
-    if (snap.type === '1') {
-      isCorrect = (enAns.length > 0 && enAns === targetEn);
-    } else {
-      const zhInputEl = document.getElementById('ans-zh-input');
-      const zhAns = normalizeCompareStr(zhInputEl ? zhInputEl.value : '');
-      const targetZhFull = normalizeCompareStr(snap.zh);
-      const validZhList = snap.zh
-        .split(/[,，/、;；]/)
-        .map(s => normalizeCompareStr(s))
-        .filter(Boolean);
-      const zhMatch = zhAns.length > 0 && (zhAns === targetZhFull || validZhList.includes(zhAns));
-      isCorrect = (enAns.length > 0 && enAns === targetEn) && zhMatch;
-    }
-
+    isSubmitting = true;
     if (submitBtn) submitBtn.disabled = true;
 
-    card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
+    try {
+      const snap = { ...activeQuestionSnapshot };
+      const card = userData.cards.find(c => c.id === snap.id);
+      if (!card) return;
 
-    if (!userData.dailyLog.answeredTodayIds.includes(card.id)) {
-      userData.dailyLog.answeredTodayIds.push(card.id);
-    }
+      syncDailyRollover();
+      const today = getLogicalDateStr();
 
-    userData.dailyLog.totalAttempts = (userData.dailyLog.totalAttempts || 0) + 1;
-    const wasLockedToday = isCardLockedToday(card);
+      const enInputEl = document.getElementById('ans-en-input');
+      if (!enInputEl) return;
+      const enAns = normalizeCompareStr(enInputEl.value);
+      const targetEn = normalizeCompareStr(snap.en);
 
-    if (isCorrect) {
-      userData.dailyLog.correctAttempts = (userData.dailyLog.correctAttempts || 0) + 1;
-
-      if (!wasLockedToday) {
-        const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
-        const intervalDays = FIB_SEQUENCE[nextIndex];
-        card.fibIndex = nextIndex;
-        card.dueDate = addDaysToLogicalDate(today, intervalDays);
-
-        if (!userData.dailyLog.completedIds.includes(card.id)) {
-          userData.dailyLog.completedIds.push(card.id);
-        }
+      let isCorrect = false;
+      if (snap.type === '1') {
+        isCorrect = (enAns.length > 0 && enAns === targetEn);
       } else {
+        const zhInputEl = document.getElementById('ans-zh-input');
+        const zhAns = normalizeCompareStr(zhInputEl ? zhInputEl.value : '');
+        const targetZhFull = normalizeCompareStr(snap.zh);
+        const validZhList = snap.zh
+          .split(/[,，/、;；]/)
+          .map(s => normalizeCompareStr(s))
+          .filter(Boolean);
+        const zhMatch = zhAns.length > 0 && (zhAns === targetZhFull || validZhList.includes(zhAns));
+        isCorrect = (enAns.length > 0 && enAns === targetEn) && zhMatch;
+      }
+
+      card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
+
+      if (!userData.dailyLog.answeredTodayIds.includes(card.id)) {
+        userData.dailyLog.answeredTodayIds.push(card.id);
+      }
+
+      userData.dailyLog.totalAttempts = (userData.dailyLog.totalAttempts || 0) + 1;
+      const wasLockedToday = isCardLockedToday(card);
+
+      if (isCorrect) {
+        userData.dailyLog.correctAttempts = (userData.dailyLog.correctAttempts || 0) + 1;
+
+        if (!wasLockedToday) {
+          const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
+          const intervalDays = FIB_SEQUENCE[nextIndex];
+          card.fibIndex = nextIndex;
+          card.dueDate = addDaysToLogicalDate(today, intervalDays);
+
+          if (!userData.dailyLog.completedIds.includes(card.id)) {
+            userData.dailyLog.completedIds.push(card.id);
+          }
+        } else {
+          card.fibIndex = 0;
+          card.dueDate = today;
+        }
+
+        saveState(false);
+        updateTopCounters();
+
+        await Promise.all([
+          showFullScreenAnimation(true, 1450),
+          queueHappySound()
+        ]);
+        activeQuestionSnapshot = null;
+        isSubmitting = false;
+        renderReviewCard(false);
+      } else {
+        card.wrongCount = (typeof card.wrongCount === 'number' ? card.wrongCount : 0) + 1;
         card.fibIndex = 0;
         card.dueDate = today;
+        card.lockedDate = today;
+
+        userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== card.id);
+        if (!userData.dailyLog.failedTodayIds.includes(card.id)) {
+          userData.dailyLog.failedTodayIds.push(card.id);
+        }
+
+        saveState(false);
+        updateTopCounters();
+
+        await Promise.all([
+          showFullScreenAnimation(false, 1500),
+          queueSadSound()
+        ]);
+
+        renderWrongAnswerCenterView(snap);
+        await queueSpeakEnglish(snap.en, false, snap.seq);
       }
-
-      saveState(true);
-      updateTopCounters();
-
-      await Promise.all([
-        showFullScreenAnimation(true, 1450),
-        queueHappySound()
-      ]);
-      activeQuestionSnapshot = null;
-      renderReviewCard(false);
-    } else {
-      card.wrongCount = (typeof card.wrongCount === 'number' ? card.wrongCount : 0) + 1;
-      card.fibIndex = 0;
-      card.dueDate = today;
-      card.lockedDate = today;
-
-      userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== card.id);
-      if (!userData.dailyLog.failedTodayIds.includes(card.id)) {
-        userData.dailyLog.failedTodayIds.push(card.id);
+    } finally {
+      if (!isViewingWrongAnswer) {
+        isSubmitting = false;
       }
-
-      saveState(true);
-      updateTopCounters();
-
-      await Promise.all([
-        showFullScreenAnimation(false, 1500),
-        queueSadSound()
-      ]);
-
-      renderWrongAnswerCenterView(snap);
-      await queueSpeakEnglish(snap.en);
     }
   }
 
