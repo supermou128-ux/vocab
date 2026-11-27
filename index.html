@@ -78,7 +78,7 @@
     }
 
     .btn:disabled {
-      opacity: 0.6;
+      opacity: 0.55;
       cursor: not-allowed;
     }
 
@@ -412,34 +412,88 @@
       background: linear-gradient(135deg, #FFF5F5 0%, #FFE3E3 100%);
       border: 4px solid #EF5350;
       border-radius: 24px;
-      padding: 28px 20px;
+      padding: 24px 18px;
       margin: 14px auto 8px;
-      max-width: 480px;
+      max-width: 520px;
       box-shadow: 0 10px 24px rgba(239, 83, 80, 0.18);
       animation: popIn 0.25s ease;
+      text-align: center;
     }
 
     .wrong-center-title {
       font-size: 1.15rem;
       font-weight: 900;
       color: #C62828;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .wrong-center-en {
-      font-size: 2.5rem;
+      font-size: 2.3rem;
       font-weight: 900;
       color: #B71C1C;
       letter-spacing: 1px;
-      margin: 8px 0;
+      margin: 6px 0;
       word-break: break-word;
     }
 
     .wrong-center-zh {
-      font-size: 1.65rem;
+      font-size: 1.5rem;
       font-weight: 900;
       color: #37474F;
-      margin: 8px 0 20px;
+      margin: 6px 0 12px;
+    }
+
+    .diff-detail-box {
+      background: #FFFFFF;
+      border: 2px solid #FFCDD2;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      text-align: left;
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
+
+    .diff-char-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 6px 0 10px;
+    }
+
+    .diff-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 28px;
+      padding: 0 6px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+
+    .diff-chip-ok {
+      background: #E8F5E9;
+      color: #1B5E20;
+      border: 1px solid #81C784;
+    }
+
+    .diff-chip-err {
+      background: #FFEBEE;
+      color: #B71C1C;
+      border: 1px solid #EF5350;
+    }
+
+    .wrong-user-ans {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #546E7A;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 12px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      word-break: break-word;
     }
 
     @keyframes popIn {
@@ -672,9 +726,12 @@
     <div id="tab-review" class="tab-panel active">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0; color:var(--primary);">🌟 Serene 今日複習挑戰</h2>
-        <select id="review-cat-filter" style="width:auto; padding:8px 14px;" onchange="renderReviewCard(true)">
-          <option value="ALL">全部類別一起複習</option>
-        </select>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button id="prev-question-btn" type="button" class="btn btn-sm btn-purple" onclick="goBackToPreviousQuestion()" disabled>↩️ 回上一題</button>
+          <select id="review-cat-filter" style="width:auto; padding:8px 14px;" onchange="renderReviewCard(true)">
+            <option value="ALL">全部類別一起複習</option>
+          </select>
+        </div>
       </div>
       <div id="review-container"></div>
     </div>
@@ -756,19 +813,8 @@
             <input type="text" id="edit-card-zh" />
           </div>
         </div>
-        <div class="grid-2">
-          <div class="form-group">
-            <label>出現次數</label>
-            <input type="number" id="edit-card-shown" min="0" step="1" />
-          </div>
-          <div class="form-group">
-            <label>答錯次數</label>
-            <input type="number" id="edit-card-wrong" min="0" step="1" />
-          </div>
-        </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
           <button class="btn btn-green btn-sm" type="button" onclick="saveEditedCard()">💾 儲存修改</button>
-          <button class="btn btn-yellow btn-sm" type="button" onclick="resetEditedCardStats()">🧹 清除紀錄（出現/答錯歸 0）</button>
           <button class="btn btn-danger btn-sm" type="button" onclick="closeEditCardPanel()">取消</button>
         </div>
       </div>
@@ -779,10 +825,11 @@
       </div>
 
       <div class="form-group">
-        <label>檢視或刪除分類（刪除分類會一併刪除該分類所有單字卡，需輸入密碼 0000）：</label>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <select id="manage-cat-select" onchange="onManageCategoryChange()"></select>
-          <button class="btn btn-danger" onclick="deleteSelectedCategory()" style="white-space:nowrap;">🗑️ 刪除此分類</button>
+        <label>檢視、全部重置或刪除分類：</label>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <select id="manage-cat-select" style="flex:1; min-width:180px;" onchange="onManageCategoryChange()"></select>
+          <button class="btn btn-yellow" type="button" onclick="resetAllCardsInSelectedCategory()" style="white-space:nowrap;">🔄 全部重置</button>
+          <button class="btn btn-danger" type="button" onclick="deleteSelectedCategory()" style="white-space:nowrap;">🗑️ 刪除此分類</button>
         </div>
       </div>
       <div id="cat-count-info" style="margin-bottom:12px; font-weight:700; color:var(--text-light);"></div>
@@ -852,7 +899,7 @@
   const FIXED_USER = 'Serene';
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
   const MAX_CARDS_PER_CATEGORY = 40000;
-  const PASSCODE_0000 = '0000';
+  const PASSCODE_VALUE = '0000';
   const LOCAL_META_KEY = 'serene_fib_vocab_meta_v12';
   const LOCAL_CHUNK_PREFIX = 'serene_fib_vocab_chunk_v12_';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
@@ -870,6 +917,7 @@
   let userData = createDefaultUserData();
   let cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
   let activeQuestionSnapshot = null;
+  let previousQuestionEntry = null;
   let questionSeq = 0;
   let isSubmitting = false;
   let isViewingWrongAnswer = false;
@@ -940,6 +988,22 @@
 
   function normalizeCompareStr(str) {
     return String(str || '').replace(/\s+/g, '').toLowerCase();
+  }
+
+  function buildNewCardFromTemplate(templateCard, todayStr, saltIdx = 0) {
+    return {
+      id: 'card_' + Date.now() + '_' + saltIdx + '_' + Math.random().toString(36).slice(2, 6),
+      categoryId: templateCard.categoryId,
+      type: templateCard.type,
+      en: templateCard.en,
+      pos: templateCard.pos,
+      zh: templateCard.zh,
+      fibIndex: 0,
+      shownCount: 0,
+      wrongCount: 0,
+      dueDate: todayStr,
+      createdAt: todayStr
+    };
   }
 
   function rebuildDuplicateIndex() {
@@ -1504,8 +1568,29 @@
       const remoteData = json && json.record ? json.record : null;
 
       if (remoteData && Array.isArray(remoteData.cards)) {
+        const localHasTodayDone =
+          userData.dailyLog &&
+          userData.dailyLog.date === getLogicalDateStr() &&
+          Array.isArray(userData.dailyLog.completedIds) &&
+          userData.dailyLog.completedIds.length > 0;
+
+        const remoteHasTodayDone =
+          remoteData.dailyLog &&
+          remoteData.dailyLog.date === getLogicalDateStr() &&
+          Array.isArray(remoteData.dailyLog.completedIds) &&
+          remoteData.dailyLog.completedIds.length > 0;
+
         if ((remoteData.updatedAt || 0) >= (userData.updatedAt || 0) || userData.cards.length === 0) {
-          userData = { ...createDefaultUserData(), ...remoteData, userName: FIXED_USER };
+          const preservedDailyLog = (localHasTodayDone && !remoteHasTodayDone)
+            ? userData.dailyLog
+            : remoteData.dailyLog;
+
+          userData = {
+            ...createDefaultUserData(),
+            ...remoteData,
+            dailyLog: preservedDailyLog,
+            userName: FIXED_USER
+          };
           if (!Array.isArray(userData.categories) || userData.categories.length === 0) {
             userData.categories = [{ id: 'cat_default', name: '基礎單字' }];
           }
@@ -1647,11 +1732,17 @@
     document.getElementById('stat-acc-today').textContent = accText;
   }
 
-  function verifyPasscode0000(promptTitle = '🔐 密碼驗證') {
-    const inputCode = prompt(`${promptTitle}\n請輸入密碼（4位數）：`);
+  function updatePrevQuestionButton() {
+    const btn = document.getElementById('prev-question-btn');
+    if (!btn) return;
+    btn.disabled = !previousQuestionEntry;
+  }
+
+  function verifyPasscode(promptTitle = '🔐 身分驗證') {
+    const inputCode = prompt(`${promptTitle}\n請輸入密碼：`);
     if (inputCode === null) return false;
-    if (inputCode.trim() !== PASSCODE_0000) {
-      alert('❌ 密碼錯誤！請輸入正確密碼。');
+    if (inputCode.trim() !== PASSCODE_VALUE) {
+      alert('❌ 密碼錯誤，無法執行此操作。');
       return false;
     }
     return true;
@@ -1725,6 +1816,68 @@
     renderWordList();
   }
 
+  function resetAllCardsInSelectedCategory() {
+    const catId = document.getElementById('manage-cat-select').value;
+    const targetCat = userData.categories.find(c => c.id === catId);
+    if (!targetCat) return;
+
+    const targetCards = userData.cards.filter(c => c.categoryId === catId);
+    if (!targetCards.length) {
+      alert(`分類「${targetCat.name}」目前沒有單字卡可重置。`);
+      return;
+    }
+
+    if (!confirm(`確定要「全部重置」分類「${targetCat.name}」內的 ${targetCards.length} 張單字卡嗎？\n將記錄所有字卡的英文、中文、詞性，刪除後重新加回成為新字卡。`)) {
+      return;
+    }
+    if (!verifyPasscode('🔄 全部重置確認')) return;
+
+    syncDailyRollover();
+    const today = getLogicalDateStr();
+
+    const recordedContents = targetCards.map(c => ({
+      categoryId: c.categoryId,
+      type: c.type,
+      en: c.en,
+      pos: c.pos,
+      zh: c.zh
+    }));
+
+    const oldIdSet = new Set(targetCards.map(c => c.id));
+    userData.cards = userData.cards.filter(c => c.categoryId !== catId);
+
+    const rebuiltCards = recordedContents.map((item, idx) =>
+      buildNewCardFromTemplate(item, today, idx)
+    );
+    for (let i = 0; i < rebuiltCards.length; i++) {
+      userData.cards.push(rebuiltCards[i]);
+    }
+
+    userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => !oldIdSet.has(id));
+    userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => !oldIdSet.has(id));
+    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => !oldIdSet.has(id));
+
+    if (activeQuestionSnapshot && oldIdSet.has(activeQuestionSnapshot.id)) {
+      activeQuestionSnapshot = null;
+      isViewingWrongAnswer = false;
+      isSubmitting = false;
+      questionSeq += 1;
+    }
+    if (previousQuestionEntry && oldIdSet.has(previousQuestionEntry.cardId)) {
+      previousQuestionEntry = null;
+      updatePrevQuestionButton();
+    }
+    if (lastShownCardId && oldIdSet.has(lastShownCardId)) {
+      lastShownCardId = null;
+    }
+
+    currentListPage = 1;
+    saveState(false);
+    refreshAllUI();
+    runGlobalSearch(currentSearchPage);
+    alert(`✅ 已完成「${targetCat.name}」共 ${rebuiltCards.length} 張單字卡的全部重置！`);
+  }
+
   function deleteSelectedCategory() {
     const catId = document.getElementById('manage-cat-select').value;
     const targetCat = userData.categories.find(c => c.id === catId);
@@ -1737,11 +1890,11 @@
 
     const cardsInCat = userData.cards.filter(c => c.categoryId === catId);
     const confirmMsg = cardsInCat.length > 0
-      ? `確定要刪除「${targetCat.name}」分類嗎？\n⚠️ 此分類內的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原！`
+      ? `確定要刪除「${targetCat.name}」分類嗎？\n此分類內的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原。`
       : `確定要刪除空分類「${targetCat.name}」嗎？`;
 
     if (!confirm(confirmMsg)) return;
-    if (!verifyPasscode0000('🗑️ 刪除分類確認')) return;
+    if (!verifyPasscode('🗑️ 刪除分類確認')) return;
 
     const removedCardIds = new Set(cardsInCat.map(c => c.id));
     userData.categories = userData.categories.filter(c => c.id !== catId);
@@ -1757,6 +1910,7 @@
   }
 
   function openEditCardPanel(cardId) {
+    if (!verifyPasscode('✏️ 修改單字卡確認')) return;
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return;
 
@@ -1768,12 +1922,9 @@
       renderWordList();
     }
 
-    const stats = normalizeCardStats(card);
     document.getElementById('edit-card-id').value = card.id;
     document.getElementById('edit-card-en').value = card.en;
     document.getElementById('edit-card-zh').value = card.zh;
-    document.getElementById('edit-card-shown').value = stats.shownCount;
-    document.getElementById('edit-card-wrong').value = stats.wrongCount;
 
     const panel = document.getElementById('edit-card-panel');
     panel.style.display = 'block';
@@ -1785,11 +1936,6 @@
     document.getElementById('edit-card-panel').style.display = 'none';
   }
 
-  function resetEditedCardStats() {
-    document.getElementById('edit-card-shown').value = 0;
-    document.getElementById('edit-card-wrong').value = 0;
-  }
-
   function saveEditedCard() {
     const cardId = document.getElementById('edit-card-id').value;
     const card = userData.cards.find(c => c.id === cardId);
@@ -1797,26 +1943,14 @@
 
     const newEn = document.getElementById('edit-card-en').value.trim();
     const newZh = document.getElementById('edit-card-zh').value.trim();
-    const rawShown = parseInt(document.getElementById('edit-card-shown').value, 10);
-    const rawWrong = parseInt(document.getElementById('edit-card-wrong').value, 10);
 
     if (!newEn || !newZh) {
       alert('英文單字與中文意思不能空白喔！');
       return;
     }
 
-    const nextShown = Number.isNaN(rawShown) || rawShown < 0 ? 0 : rawShown;
-    const nextWrong = Number.isNaN(rawWrong) || rawWrong < 0 ? 0 : rawWrong;
-
     card.en = newEn;
     card.zh = newZh;
-    card.shownCount = nextShown;
-    card.wrongCount = nextWrong;
-
-    if (nextWrong === 0) {
-      delete card.lockedDate;
-      userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== card.id);
-    }
 
     if (activeQuestionSnapshot && activeQuestionSnapshot.id === card.id) {
       activeQuestionSnapshot.en = newEn;
@@ -1828,6 +1962,48 @@
     runGlobalSearch(currentSearchPage);
     closeEditCardPanel();
     alert(`✅ 已更新單字卡「${newEn}」！`);
+  }
+
+  function resetSingleCardAsNew(cardId) {
+    const card = userData.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    if (!confirm(`確定要「重置」單字卡「${card.en}」嗎？\n將會刪除這張字卡並重新建立一張相同英文、中文與詞性的新字卡。`)) {
+      return;
+    }
+    if (!verifyPasscode('🔄 重置單字卡確認')) return;
+
+    syncDailyRollover();
+    const today = getLogicalDateStr();
+    const freshCard = buildNewCardFromTemplate(card, today, 0);
+
+    const idx = userData.cards.findIndex(c => c.id === cardId);
+    if (idx !== -1) {
+      userData.cards[idx] = freshCard;
+    }
+
+    userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
+    userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== cardId);
+    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => id !== cardId);
+
+    if (activeQuestionSnapshot && activeQuestionSnapshot.id === cardId) {
+      activeQuestionSnapshot = null;
+      isViewingWrongAnswer = false;
+      isSubmitting = false;
+      questionSeq += 1;
+    }
+    if (previousQuestionEntry && previousQuestionEntry.cardId === cardId) {
+      previousQuestionEntry = null;
+      updatePrevQuestionButton();
+    }
+    if (lastShownCardId === cardId) {
+      lastShownCardId = null;
+    }
+
+    saveState(false);
+    refreshAllUI();
+    runGlobalSearch(currentSearchPage);
+    alert(`🔄 已將「${freshCard.en}」重置為新字卡！`);
   }
 
   function checkDuplicateWordLive() {
@@ -1952,7 +2128,6 @@
       return;
     }
 
-    // 一次比對全部字卡
     const matches = [];
     for (let i = 0; i < userData.cards.length; i++) {
       const c = userData.cards[i];
@@ -1988,8 +2163,9 @@
               📁 ${escapeHtml(catName)} ｜ ${typeTag} ｜ 出現 ${stats.shownCount} 次 / 錯 ${stats.wrongCount} 次
             </div>
           </div>
-          <div style="display:flex; gap:8px;">
-            <button type="button" class="btn btn-sm btn-green" onclick="openEditCardPanel('${c.id}')">✏️ 修改</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm btn-green" onclick="openEditCardPanel('${c.id}')">修改</button>
+            <button type="button" class="btn btn-sm btn-yellow" onclick="resetSingleCardAsNew('${c.id}')">重置</button>
             <button type="button" class="btn btn-sm btn-pink" onclick="deleteCard('${c.id}')">刪除</button>
           </div>
         </div>
@@ -2013,7 +2189,7 @@
     if (askConfirm && !confirm(`確定要刪除單字卡「${card.en}」嗎？`)) {
       return false;
     }
-    if (!verifyPasscode0000('🗑️ 刪除單字卡確認')) return false;
+    if (!verifyPasscode('🗑️ 刪除單字卡確認')) return false;
 
     userData.cards = userData.cards.filter(c => c.id !== cardId);
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
@@ -2025,6 +2201,10 @@
       isViewingWrongAnswer = false;
       isSubmitting = false;
       questionSeq += 1;
+    }
+    if (previousQuestionEntry && previousQuestionEntry.cardId === cardId) {
+      previousQuestionEntry = null;
+      updatePrevQuestionButton();
     }
     saveState(false);
     refreshAllUI();
@@ -2108,12 +2288,17 @@
       leftDiv.appendChild(metaDiv);
 
       const rightBtns = document.createElement('div');
-      rightBtns.style.cssText = 'display:flex; gap:8px;';
+      rightBtns.style.cssText = 'display:flex; gap:8px; flex-wrap:wrap;';
 
       const editBtn = document.createElement('button');
       editBtn.className = 'btn btn-sm btn-green';
       editBtn.textContent = '修改';
       editBtn.onclick = () => openEditCardPanel(c.id);
+
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'btn btn-sm btn-yellow';
+      resetBtn.textContent = '重置';
+      resetBtn.onclick = () => resetSingleCardAsNew(c.id);
 
       const delBtn = document.createElement('button');
       delBtn.className = 'btn btn-sm btn-pink';
@@ -2121,6 +2306,7 @@
       delBtn.onclick = () => deleteCard(c.id);
 
       rightBtns.appendChild(editBtn);
+      rightBtns.appendChild(resetBtn);
       rightBtns.appendChild(delBtn);
 
       item.appendChild(leftDiv);
@@ -2160,32 +2346,37 @@
     return orderedPool[0];
   }
 
-  function renderReviewCard(resetRotation = false) {
-    if (isSubmitting || isViewingWrongAnswer) return;
+  function renderReviewCard(resetRotation = false, forcedCard = null, prefillEn = '', prefillZh = '') {
+    if (!forcedCard && (isSubmitting || isViewingWrongAnswer)) return;
     if (resetRotation) lastShownCardId = null;
 
-    const { dueCards } = getTodayCounts();
-    const filterCat = document.getElementById('review-cat-filter').value;
-    const filtered = filterCat === 'ALL'
-      ? dueCards
-      : dueCards.filter(c => c.categoryId === filterCat);
-
     const container = document.getElementById('review-container');
+    let card = forcedCard;
 
-    if (!filtered.length) {
-      activeQuestionSnapshot = null;
-      questionSeq += 1;
-      container.innerHTML = `
-        <div class="review-card" style="border-color: var(--accent-green);">
-          <div style="font-size: 4rem;">🏆🎉🌟</div>
-          <h2 style="color: var(--accent-green); margin: 10px 0;">太棒了！今天沒有待複習的單字囉！</h2>
-          <p style="color: var(--text-light);">你可以去「新增單字」加入更多單字卡，或是明天早上 6:00 再回來挑戰！</p>
-        </div>
-      `;
-      return;
+    if (!card) {
+      const { dueCards } = getTodayCounts();
+      const filterCat = document.getElementById('review-cat-filter').value;
+      const filtered = filterCat === 'ALL'
+        ? dueCards
+        : dueCards.filter(c => c.categoryId === filterCat);
+
+      if (!filtered.length) {
+        activeQuestionSnapshot = null;
+        questionSeq += 1;
+        updatePrevQuestionButton();
+        container.innerHTML = `
+          <div class="review-card" style="border-color: var(--accent-green);">
+            <div style="font-size: 4rem;">🏆🎉🌟</div>
+            <h2 style="color: var(--accent-green); margin: 10px 0;">太棒了！今天沒有待複習的單字囉！</h2>
+            <p style="color: var(--text-light);">你可以去「新增單字」加入更多單字卡，或是明天早上 6:00 再回來挑戰！</p>
+          </div>
+        `;
+        return;
+      }
+
+      card = pickNextReviewCard(filtered);
     }
 
-    const card = pickNextReviewCard(filtered);
     const seq = ++questionSeq;
 
     activeQuestionSnapshot = {
@@ -2199,6 +2390,7 @@
       fibIndex: card.fibIndex
     };
     lastShownCardId = card.id;
+    updatePrevQuestionButton();
 
     const stats = normalizeCardStats(card);
     const catName = userData.categories.find(c => c.id === card.categoryId)?.name || '未分類';
@@ -2243,13 +2435,14 @@
             <div class="letter-slots" id="letter-slots-box">${slotsHtml}</div>
             <div class="form-group" style="max-width:360px; margin:0 auto 16px;">
               <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer(${seq})" />
+                value="${escapeHtml(prefillEn)}" placeholder="在這裡輸入英文..." oninput="syncLetterSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer(${seq})" />
             </div>
             ${actionButtonsHtml('btn-primary')}
           </div>
           <div id="wrong-answer-stage" style="display:none;"></div>
         </div>
       `;
+      if (prefillEn) syncLetterSlots(prefillEn);
       setTimeout(() => {
         if (seq === questionSeq) {
           document.getElementById('ans-en-input')?.focus();
@@ -2267,11 +2460,11 @@
             <div class="form-group" style="max-width:380px; margin:0 auto 12px;">
               <label>英文單字：</label>
               <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                placeholder="請輸入聽到的英文..." />
+                value="${escapeHtml(prefillEn)}" placeholder="請輸入聽到的英文..." />
             </div>
             <div class="form-group" style="max-width:380px; margin:0 auto 16px;">
               <label>中文意思：</label>
-              <input type="text" id="ans-zh-input" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer(${seq})" />
+              <input type="text" id="ans-zh-input" value="${escapeHtml(prefillZh)}" placeholder="請輸入中文意思..." onkeypress="if(event.key==='Enter') submitAnswer(${seq})" />
             </div>
             ${actionButtonsHtml('btn-pink')}
           </div>
@@ -2281,6 +2474,39 @@
       document.getElementById('review-play-audio-btn').onclick = () => queueSpeakEnglish(spokenWord, false, seq);
       queueSpeakEnglish(spokenWord, false, seq);
     }
+  }
+
+  function goBackToPreviousQuestion() {
+    if (!previousQuestionEntry) return;
+    const entry = previousQuestionEntry;
+    const targetCard = userData.cards.find(c => c.id === entry.cardId);
+    if (!targetCard) {
+      previousQuestionEntry = null;
+      updatePrevQuestionButton();
+      return;
+    }
+
+    isSubmitting = false;
+    isViewingWrongAnswer = false;
+    questionSeq += 1;
+
+    targetCard.fibIndex = entry.cardBefore.fibIndex;
+    targetCard.shownCount = entry.cardBefore.shownCount;
+    targetCard.wrongCount = entry.cardBefore.wrongCount;
+    targetCard.dueDate = entry.cardBefore.dueDate;
+    if (entry.cardBefore.lockedDate !== undefined) {
+      targetCard.lockedDate = entry.cardBefore.lockedDate;
+    } else {
+      delete targetCard.lockedDate;
+    }
+
+    userData.dailyLog = JSON.parse(JSON.stringify(entry.dailyLogBefore));
+    previousQuestionEntry = null;
+    updatePrevQuestionButton();
+
+    saveState(false);
+    updateTopCounters();
+    renderReviewCard(false, targetCard, entry.rawEnVal || '', entry.rawZhVal || '');
   }
 
   function syncLetterSlots(val) {
@@ -2300,7 +2526,7 @@
     if (!confirm(`🌟 確定要將「${snap.en}」標記為「今天真的學會!」，強制進入下一階並列入今日完成嗎？`)) {
       return;
     }
-    if (!verifyPasscode0000('🌟 今天真的學會!確認')) return;
+    if (!verifyPasscode('🌟 今天真的學會!確認')) return;
 
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return;
@@ -2336,26 +2562,106 @@
     renderReviewCard(false);
   }
 
-  function renderWrongAnswerCenterView(answerSnapshot) {
+  function buildEnglishDiffHtml(userEn, targetEn) {
+    const uClean = String(userEn || '').replace(/\s+/g, '').toLowerCase();
+    const tClean = String(targetEn || '').replace(/\s+/g, '').toLowerCase();
+    const maxLen = Math.max(uClean.length, tClean.length);
+    const mismatchPositions = [];
+    const chips = [];
+
+    for (let i = 0; i < maxLen; i++) {
+      const uCh = uClean[i] || '␣';
+      const tCh = tClean[i] || '␣';
+      const ok = uClean[i] !== undefined && tClean[i] !== undefined && uClean[i] === tClean[i];
+      if (!ok) mismatchPositions.push(i + 1);
+      chips.push(
+        `<span class="diff-chip ${ok ? 'diff-chip-ok' : 'diff-chip-err'}" title="第 ${i + 1} 碼：你的「${escapeHtml(uCh)}」／正確「${escapeHtml(tCh)}」">${escapeHtml(uCh)}</span>`
+      );
+    }
+
+    const reasonText = !uClean
+      ? '英文尚未輸入'
+      : mismatchPositions.length > 0
+        ? `英文拼字在第 ${mismatchPositions.join('、')} 個字母有差異（正確為「${targetEn}」）`
+        : '英文拼字正確';
+
+    return {
+      chipsHtml: `<div class="diff-char-row">${chips.join('')}</div>`,
+      reasonText
+    };
+  }
+
+  function checkChineseMatched(rawZhVal, targetZh) {
+    const zhAns = normalizeCompareStr(rawZhVal);
+    const targetZhFull = normalizeCompareStr(targetZh);
+    const validZhList = String(targetZh || '')
+      .split(/[,，/、;；]/)
+      .map(s => normalizeCompareStr(s))
+      .filter(Boolean);
+    return zhAns.length > 0 && (zhAns === targetZhFull || validZhList.includes(zhAns));
+  }
+
+  function renderWrongAnswerCenterView(answerSnapshot, rawEnVal = '', rawZhVal = '') {
     isViewingWrongAnswer = true;
     const questionBody = document.getElementById('question-body');
     const wrongStage = document.getElementById('wrong-answer-stage');
     if (questionBody) questionBody.style.display = 'none';
     if (!wrongStage) return;
 
+    const enDiff = buildEnglishDiffHtml(rawEnVal, answerSnapshot.en);
+    const isEnCorrect = normalizeCompareStr(rawEnVal).length > 0 && normalizeCompareStr(rawEnVal) === normalizeCompareStr(answerSnapshot.en);
+    const isZhCorrect = answerSnapshot.type === '2' ? checkChineseMatched(rawZhVal, answerSnapshot.zh) : true;
+
+    let mistakeLines = [];
+    if (!isEnCorrect) {
+      mistakeLines.push(`❌ ${escapeHtml(enDiff.reasonText)}`);
+    } else if (answerSnapshot.type === '2') {
+      mistakeLines.push(`✅ 英文拼字正確`);
+    }
+
+    if (answerSnapshot.type === '2') {
+      if (!isZhCorrect) {
+        mistakeLines.push(`❌ 中文意思有誤：你輸入「${escapeHtml(rawZhVal || '未填寫')}」，正確為「${escapeHtml(answerSnapshot.zh)}」`);
+      } else {
+        mistakeLines.push(`✅ 中文意思正確`);
+      }
+    }
+
+    const userSummaryText = answerSnapshot.type === '1'
+      ? `你的英文作答：${rawEnVal || '（未填寫）'}`
+      : `你的作答：英文「${rawEnVal || '（未填寫）'}」／ 中文「${rawZhVal || '（未填寫）'}」`;
+
     wrongStage.style.display = 'block';
     wrongStage.innerHTML = `
       <div class="wrong-center-box">
-        <div class="wrong-center-title">📖 正確答案看這裡</div>
+        <div class="wrong-center-title">📖 答錯比對與正確答案</div>
         <div class="wrong-center-en">${escapeHtml(answerSnapshot.en)}</div>
-        <div class="prompt-pos" style="margin-bottom:10px;">詞性：${escapeHtml(answerSnapshot.pos)}</div>
+        <div class="prompt-pos" style="margin-bottom:8px;">詞性：${escapeHtml(answerSnapshot.pos)}</div>
         <div class="wrong-center-zh">${escapeHtml(answerSnapshot.zh)}</div>
+        <div class="diff-detail-box">
+          <div style="font-weight:900; color:#C62828; margin-bottom:4px;">🔍 錯誤處比對：</div>
+          <div>${mistakeLines.join('<br>')}</div>
+          <div style="font-size:0.84rem; color:#78909C; margin-top:6px;">逐字比對（紅底為差異處，␣ 表示缺漏或超出）：</div>
+          ${enDiff.chipsHtml}
+        </div>
+        <div class="wrong-user-ans">${escapeHtml(userSummaryText)}</div>
         <button id="mem-done-btn" type="button" class="btn btn-green" style="width:100%; max-width:320px; font-size:1.15rem;" onclick="finishWrongAnswerAndGoNext()">
           ✅ 已經背好了!
         </button>
       </div>
     `;
     setTimeout(() => document.getElementById('mem-done-btn')?.focus(), 80);
+  }
+
+  function evaluateAnswerMatch(snap, rawEnVal, rawZhVal) {
+    const enAns = normalizeCompareStr(rawEnVal);
+    const targetEn = normalizeCompareStr(snap.en);
+
+    if (snap.type === '1') {
+      return enAns.length > 0 && enAns === targetEn;
+    }
+
+    return enAns.length > 0 && enAns === targetEn && checkChineseMatched(rawZhVal, snap.zh);
   }
 
   async function submitAnswer(expectedSeq = null) {
@@ -2379,23 +2685,27 @@
 
       const enInputEl = document.getElementById('ans-en-input');
       if (!enInputEl) return;
-      const enAns = normalizeCompareStr(enInputEl.value);
-      const targetEn = normalizeCompareStr(snap.en);
+      const zhInputEl = document.getElementById('ans-zh-input');
 
-      let isCorrect = false;
-      if (snap.type === '1') {
-        isCorrect = (enAns.length > 0 && enAns === targetEn);
-      } else {
-        const zhInputEl = document.getElementById('ans-zh-input');
-        const zhAns = normalizeCompareStr(zhInputEl ? zhInputEl.value : '');
-        const targetZhFull = normalizeCompareStr(snap.zh);
-        const validZhList = snap.zh
-          .split(/[,，/、;；]/)
-          .map(s => normalizeCompareStr(s))
-          .filter(Boolean);
-        const zhMatch = zhAns.length > 0 && (zhAns === targetZhFull || validZhList.includes(zhAns));
-        isCorrect = (enAns.length > 0 && enAns === targetEn) && zhMatch;
-      }
+      const rawEnVal = enInputEl.value.trim();
+      const rawZhVal = zhInputEl ? zhInputEl.value.trim() : '';
+
+      previousQuestionEntry = {
+        cardId: card.id,
+        rawEnVal,
+        rawZhVal,
+        cardBefore: {
+          fibIndex: card.fibIndex,
+          shownCount: typeof card.shownCount === 'number' ? card.shownCount : 0,
+          wrongCount: typeof card.wrongCount === 'number' ? card.wrongCount : 0,
+          dueDate: card.dueDate,
+          lockedDate: card.lockedDate
+        },
+        dailyLogBefore: JSON.parse(JSON.stringify(userData.dailyLog))
+      };
+      updatePrevQuestionButton();
+
+      const isCorrect = evaluateAnswerMatch(snap, rawEnVal, rawZhVal);
 
       card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
 
@@ -2452,7 +2762,7 @@
           queueSadSound()
         ]);
 
-        renderWrongAnswerCenterView(snap);
+        renderWrongAnswerCenterView(snap, rawEnVal, rawZhVal);
         await queueSpeakEnglish(snap.en, false, snap.seq);
       }
     } finally {
@@ -2522,6 +2832,7 @@
   function refreshAllUI() {
     populateCategorySelects();
     updateTopCounters();
+    updatePrevQuestionButton();
     renderReviewCard(false);
     renderWordList();
   }
