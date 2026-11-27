@@ -785,7 +785,7 @@
         <input type="text" id="word-zh" placeholder="例如：廣告" onkeypress="if(event.key==='Enter') addWordCard()" />
       </div>
 
-      <button class="btn btn-green" style="width:100%; font-size:1.15rem;" onclick="addWordCard()">💾 儲存單字卡（立即加入今日狀態 0 複習）</button>
+      <button class="btn btn-green" style="width:100%; font-size:1.15rem;" onclick="addWordCard()">💾 儲存單字卡（立即加入今日剩餘題數）</button>
     </div>
 
     <div id="tab-categories" class="tab-panel">
@@ -900,8 +900,8 @@
   const FIB_SEQUENCE = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
   const MAX_CARDS_PER_CATEGORY = 40000;
   const PASSCODE_VALUE = '0000';
-  const LOCAL_META_KEY = 'serene_fib_vocab_meta_v12';
-  const LOCAL_CHUNK_PREFIX = 'serene_fib_vocab_chunk_v12_';
+  const LOCAL_META_KEY = 'serene_fib_vocab_meta_v13';
+  const LOCAL_CHUNK_PREFIX = 'serene_fib_vocab_chunk_v13_';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
 
   const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
@@ -959,9 +959,9 @@
       cards: [],
       dailyLog: {
         date: getLogicalDateStr(),
+        remainingIds: [],
         completedIds: [],
         failedTodayIds: [],
-        answeredTodayIds: [],
         totalAttempts: 0,
         correctAttempts: 0
       }
@@ -1341,6 +1341,7 @@
     } catch (e) {}
 
     const legacyKeys = [
+      'serene_fib_vocab_meta_v12',
       'serene_fib_vocab_data_v11',
       'serene_fib_vocab_data_v10',
       'serene_fib_vocab_data_v9',
@@ -1568,20 +1569,26 @@
       const remoteData = json && json.record ? json.record : null;
 
       if (remoteData && Array.isArray(remoteData.cards)) {
-        const localHasTodayDone =
+        const localHasTodayLog =
           userData.dailyLog &&
           userData.dailyLog.date === getLogicalDateStr() &&
-          Array.isArray(userData.dailyLog.completedIds) &&
-          userData.dailyLog.completedIds.length > 0;
+          (
+            (Array.isArray(userData.dailyLog.completedIds) && userData.dailyLog.completedIds.length > 0) ||
+            (Array.isArray(userData.dailyLog.failedTodayIds) && userData.dailyLog.failedTodayIds.length > 0) ||
+            (userData.dailyLog.totalAttempts || 0) > 0
+          );
 
-        const remoteHasTodayDone =
+        const remoteHasTodayLog =
           remoteData.dailyLog &&
           remoteData.dailyLog.date === getLogicalDateStr() &&
-          Array.isArray(remoteData.dailyLog.completedIds) &&
-          remoteData.dailyLog.completedIds.length > 0;
+          (
+            (Array.isArray(remoteData.dailyLog.completedIds) && remoteData.dailyLog.completedIds.length > 0) ||
+            (Array.isArray(remoteData.dailyLog.failedTodayIds) && remoteData.dailyLog.failedTodayIds.length > 0) ||
+            (remoteData.dailyLog.totalAttempts || 0) > 0
+          );
 
         if ((remoteData.updatedAt || 0) >= (userData.updatedAt || 0) || userData.cards.length === 0) {
-          const preservedDailyLog = (localHasTodayDone && !remoteHasTodayDone)
+          const preservedDailyLog = (localHasTodayLog && !remoteHasTodayLog)
             ? userData.dailyLog
             : remoteData.dailyLog;
 
@@ -1628,97 +1635,122 @@
 
   function syncDailyRollover() {
     const today = getLogicalDateStr();
+    const validCardIdSet = new Set(userData.cards.map(c => c.id));
+
     if (!userData.dailyLog || userData.dailyLog.date !== today) {
-      userData.dailyLog = {
-        date: today,
-        completedIds: [],
-        failedTodayIds: [],
-        answeredTodayIds: [],
-        totalAttempts: 0,
-        correctAttempts: 0
-      };
-      userData.cards.forEach(c => {
+      const carryOverSet = new Set();
+
+      if (userData.dailyLog && Array.isArray(userData.dailyLog.failedTodayIds)) {
+        for (let i = 0; i < userData.dailyLog.failedTodayIds.length; i++) {
+          const id = userData.dailyLog.failedTodayIds[i];
+          if (validCardIdSet.has(id)) carryOverSet.add(id);
+        }
+      }
+      if (userData.dailyLog && Array.isArray(userData.dailyLog.remainingIds)) {
+        for (let i = 0; i < userData.dailyLog.remainingIds.length; i++) {
+          const id = userData.dailyLog.remainingIds[i];
+          if (validCardIdSet.has(id)) carryOverSet.add(id);
+        }
+      }
+      for (let i = 0; i < userData.cards.length; i++) {
+        const c = userData.cards[i];
+        if (c.dueDate <= today || c.createdAt === today) {
+          carryOverSet.add(c.id);
+        }
         if (c.lockedDate && c.lockedDate !== today) {
           delete c.lockedDate;
         }
-      });
-      saveState(false);
-    } else {
-      if (!Array.isArray(userData.dailyLog.completedIds)) userData.dailyLog.completedIds = [];
-      if (!Array.isArray(userData.dailyLog.failedTodayIds)) userData.dailyLog.failedTodayIds = [];
-      if (!Array.isArray(userData.dailyLog.answeredTodayIds)) {
-        const seed = new Set([...userData.dailyLog.completedIds, ...userData.dailyLog.failedTodayIds]);
-        userData.dailyLog.answeredTodayIds = [...seed];
       }
-      if (typeof userData.dailyLog.totalAttempts !== 'number') userData.dailyLog.totalAttempts = 0;
-      if (typeof userData.dailyLog.correctAttempts !== 'number') userData.dailyLog.correctAttempts = 0;
+
+      userData.dailyLog = {
+        date: today,
+        remainingIds: [...carryOverSet],
+        completedIds: [],
+        failedTodayIds: [],
+        totalAttempts: 0,
+        correctAttempts: 0
+      };
+      saveState(false);
+      return;
     }
+
+    if (!Array.isArray(userData.dailyLog.remainingIds)) userData.dailyLog.remainingIds = [];
+    if (!Array.isArray(userData.dailyLog.completedIds)) userData.dailyLog.completedIds = [];
+    if (!Array.isArray(userData.dailyLog.failedTodayIds)) userData.dailyLog.failedTodayIds = [];
+
+    userData.dailyLog.remainingIds = [...new Set(userData.dailyLog.remainingIds)].filter(id => validCardIdSet.has(id));
+    userData.dailyLog.completedIds = [...new Set(userData.dailyLog.completedIds)].filter(id => validCardIdSet.has(id));
+    userData.dailyLog.failedTodayIds = [...new Set(userData.dailyLog.failedTodayIds)].filter(id => validCardIdSet.has(id));
+
+    const completedSet = new Set(userData.dailyLog.completedIds);
+    const failedSet = new Set(userData.dailyLog.failedTodayIds);
+    const remainingSet = new Set(userData.dailyLog.remainingIds);
+
+    for (let i = 0; i < userData.cards.length; i++) {
+      const c = userData.cards[i];
+      if (!completedSet.has(c.id) && !failedSet.has(c.id) && !remainingSet.has(c.id)) {
+        if (c.dueDate <= today || c.createdAt === today) {
+          userData.dailyLog.remainingIds.push(c.id);
+          remainingSet.add(c.id);
+        }
+      }
+    }
+
+    if (typeof userData.dailyLog.totalAttempts !== 'number') userData.dailyLog.totalAttempts = 0;
+    if (typeof userData.dailyLog.correctAttempts !== 'number') userData.dailyLog.correctAttempts = 0;
   }
 
-  function isCardLockedToday(card) {
-    const today = getLogicalDateStr();
-    return card.lockedDate === today || userData.dailyLog.failedTodayIds.includes(card.id);
+  function isCardInTodayRemaining(cardId) {
+    syncDailyRollover();
+    return userData.dailyLog.remainingIds.includes(cardId);
   }
 
-  function hasCardBeenAnsweredToday(cardId) {
-    return Array.isArray(userData.dailyLog.answeredTodayIds) && userData.dailyLog.answeredTodayIds.includes(cardId);
+  function isCardInTodayFailed(cardId) {
+    syncDailyRollover();
+    return userData.dailyLog.failedTodayIds.includes(cardId);
+  }
+
+  function isCardInTodayCompleted(cardId) {
+    syncDailyRollover();
+    return userData.dailyLog.completedIds.includes(cardId);
   }
 
   function getTodayCounts() {
     syncDailyRollover();
-    const today = getLogicalDateStr();
-    const completedSet = new Set(userData.dailyLog.completedIds);
-    const failedSet = new Set(userData.dailyLog.failedTodayIds);
-    const answeredSet = new Set(userData.dailyLog.answeredTodayIds);
+    const cardMap = new Map(userData.cards.map(c => [c.id, c]));
 
-    const dueCards = [];
-    let scheduledOrNewTodayCount = 0;
-    let answeredTodayCount = 0;
+    const doneCount = userData.dailyLog.completedIds.length;
+    const todoCount = userData.dailyLog.failedTodayIds.length;
+    const remainingCount = userData.dailyLog.remainingIds.length;
 
-    for (let i = 0; i < userData.cards.length; i++) {
-      const c = userData.cards[i];
-      const locked = c.lockedDate === today || failedSet.has(c.id);
-      const isDue = c.dueDate <= today || locked;
-      if (isDue) {
-        dueCards.push(c);
-      }
-      if (isDue || c.createdAt === today) {
-        scheduledOrNewTodayCount++;
-        if (answeredSet.has(c.id)) {
-          answeredTodayCount++;
-        }
-      }
+    const remainingCards = [];
+    for (let i = 0; i < userData.dailyLog.remainingIds.length; i++) {
+      const c = cardMap.get(userData.dailyLog.remainingIds[i]);
+      if (c) remainingCards.push(c);
     }
 
-    let doneCount = 0;
-    let todoCount = 0;
-    for (let i = 0; i < dueCards.length; i++) {
-      if (completedSet.has(dueCards[i].id)) {
-        doneCount++;
-      } else {
-        todoCount++;
-      }
+    const failedCards = [];
+    for (let i = 0; i < userData.dailyLog.failedTodayIds.length; i++) {
+      const c = cardMap.get(userData.dailyLog.failedTodayIds[i]);
+      if (c) failedCards.push(c);
     }
 
-    const remainingCount = Math.max(0, scheduledOrNewTodayCount - answeredTodayCount);
-    return { doneCount, todoCount, remainingCount, dueCards };
+    return { doneCount, todoCount, remainingCount, remainingCards, failedCards };
   }
 
-  function getConditionalAccuracyText(remainingCount, todoCount, doneCount) {
-    if (remainingCount !== 0) {
+  function getTodayAccuracyText(totalAttempts, correctAttempts) {
+    if (!totalAttempts || totalAttempts <= 0) {
       return '--%';
     }
-    const totalCount = doneCount + todoCount;
-    if (totalCount <= 0) {
-      return '--%';
-    }
-    const rate = Math.round((doneCount / totalCount) * 100);
+    const rate = Math.round((correctAttempts / totalAttempts) * 100);
     return `${rate}%`;
   }
 
   function updateTopCounters() {
     const { doneCount, todoCount, remainingCount } = getTodayCounts();
-    const accText = getConditionalAccuracyText(remainingCount, todoCount, doneCount);
+    const totalAttempts = userData.dailyLog.totalAttempts || 0;
+    const correctAttempts = userData.dailyLog.correctAttempts || 0;
+    const accText = getTodayAccuracyText(totalAttempts, correctAttempts);
 
     document.getElementById('today-done-count').textContent = doneCount;
     document.getElementById('today-todo-count').textContent = todoCount;
@@ -1851,11 +1883,14 @@
     );
     for (let i = 0; i < rebuiltCards.length; i++) {
       userData.cards.push(rebuiltCards[i]);
+      if (!userData.dailyLog.remainingIds.includes(rebuiltCards[i].id)) {
+        userData.dailyLog.remainingIds.push(rebuiltCards[i].id);
+      }
     }
 
+    userData.dailyLog.remainingIds = userData.dailyLog.remainingIds.filter(id => !oldIdSet.has(id));
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => !oldIdSet.has(id));
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => !oldIdSet.has(id));
-    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => !oldIdSet.has(id));
 
     if (activeQuestionSnapshot && oldIdSet.has(activeQuestionSnapshot.id)) {
       activeQuestionSnapshot = null;
@@ -1899,9 +1934,9 @@
     const removedCardIds = new Set(cardsInCat.map(c => c.id));
     userData.categories = userData.categories.filter(c => c.id !== catId);
     userData.cards = userData.cards.filter(c => c.categoryId !== catId);
+    userData.dailyLog.remainingIds = userData.dailyLog.remainingIds.filter(id => !removedCardIds.has(id));
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => !removedCardIds.has(id));
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => !removedCardIds.has(id));
-    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => !removedCardIds.has(id));
 
     currentListPage = 1;
     saveState(false);
@@ -1982,9 +2017,13 @@
       userData.cards[idx] = freshCard;
     }
 
+    userData.dailyLog.remainingIds = userData.dailyLog.remainingIds.filter(id => id !== cardId);
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== cardId);
-    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => id !== cardId);
+
+    if (!userData.dailyLog.remainingIds.includes(freshCard.id)) {
+      userData.dailyLog.remainingIds.push(freshCard.id);
+    }
 
     if (activeQuestionSnapshot && activeQuestionSnapshot.id === cardId) {
       activeQuestionSnapshot = null;
@@ -2074,9 +2113,10 @@
       return;
     }
 
+    syncDailyRollover();
     const today = getLogicalDateStr();
     typesToCreate.forEach((t, idx) => {
-      userData.cards.push({
+      const newCard = {
         id: 'card_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 6),
         categoryId,
         type: t,
@@ -2088,7 +2128,11 @@
         wrongCount: 0,
         dueDate: today,
         createdAt: today
-      });
+      };
+      userData.cards.push(newCard);
+      if (!userData.dailyLog.remainingIds.includes(newCard.id)) {
+        userData.dailyLog.remainingIds.push(newCard.id);
+      }
     });
 
     saveState(false);
@@ -2099,9 +2143,9 @@
     refreshAllUI();
 
     if (selectedType === 'BOTH') {
-      alert(`🎉 成功同時加入「${en}」的型態一與型態二共 2 張單字卡！已列入今日狀態 0 複習清單。`);
+      alert(`🎉 成功同時加入「${en}」的型態一與型態二共 2 張單字卡！已列入今日剩餘題數。`);
     } else {
-      alert(`🎉 成功加入「${en}」！已列入今日狀態 0 複習清單。`);
+      alert(`🎉 成功加入「${en}」！已列入今日剩餘題數。`);
     }
   }
 
@@ -2192,9 +2236,9 @@
     if (!verifyPasscode('🗑️ 刪除單字卡確認')) return false;
 
     userData.cards = userData.cards.filter(c => c.id !== cardId);
+    userData.dailyLog.remainingIds = userData.dailyLog.remainingIds.filter(id => id !== cardId);
     userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== cardId);
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== cardId);
-    userData.dailyLog.answeredTodayIds = userData.dailyLog.answeredTodayIds.filter(id => id !== cardId);
     if (lastShownCardId === cardId) lastShownCardId = null;
     if (activeQuestionSnapshot && activeQuestionSnapshot.id === cardId) {
       activeQuestionSnapshot = null;
@@ -2279,10 +2323,10 @@
       speakBtn.onclick = () => queueSpeakEnglish(c.en, true);
       titleDiv.appendChild(speakBtn);
 
-      const lockedNote = isCardLockedToday(c) ? ' ｜ 🔒 今日首答失誤(輪流複習中)' : '';
+      const failedTodayNote = isCardInTodayFailed(c.id) ? ' ｜ 🔥 今日未完成（重複練習中，明日 06:00 重置）' : '';
       const metaDiv = document.createElement('div');
       metaDiv.style.cssText = 'font-size:0.85rem; color:var(--text-light); margin-top:4px;';
-      metaDiv.innerHTML = `${c.type === '1' ? '📝 型態一(中文拼英文)' : '🎧 型態二(聽音寫英中)'} ｜ <span class="fib-pill">費氏階段 #${c.fibIndex} (間隔 ${FIB_SEQUENCE[c.fibIndex] ?? 377} 天)</span> ｜ 出現 ${stats.shownCount} 次 / 錯 ${stats.wrongCount} 次 (${stats.wrongRate}%) ｜ 下次複習：${c.dueDate}${lockedNote}`;
+      metaDiv.innerHTML = `${c.type === '1' ? '📝 型態一(中文拼英文)' : '🎧 型態二(聽音寫英中)'} ｜ <span class="fib-pill">費氏階段 #${c.fibIndex} (間隔 ${FIB_SEQUENCE[c.fibIndex] ?? 377} 天)</span> ｜ 出現 ${stats.shownCount} 次 / 錯 ${stats.wrongCount} 次 (${stats.wrongRate}%) ｜ 下次複習：${c.dueDate}${failedTodayNote}`;
 
       leftDiv.appendChild(titleDiv);
       leftDiv.appendChild(metaDiv);
@@ -2321,23 +2365,23 @@
     ` : '';
   }
 
-  function pickNextReviewCard(filteredCards) {
-    if (!filteredCards.length) return null;
-    if (filteredCards.length === 1) return filteredCards[0];
+  function pickNextReviewCard(candidateCards) {
+    if (!candidateCards.length) return null;
+    if (candidateCards.length === 1) return candidateCards[0];
 
-    const unansweredType2 = filteredCards.filter(c => c.type === '2' && !hasCardBeenAnsweredToday(c.id));
-    if (unansweredType2.length > 0) {
-      return unansweredType2.find(c => c.id !== lastShownCardId) || unansweredType2[0];
+    const remainingType2 = candidateCards.filter(c => c.type === '2' && isCardInTodayRemaining(c.id));
+    if (remainingType2.length > 0) {
+      return remainingType2.find(c => c.id !== lastShownCardId) || remainingType2[0];
     }
 
-    const unansweredType1 = filteredCards.filter(c => c.type === '1' && !hasCardBeenAnsweredToday(c.id));
-    if (unansweredType1.length > 0) {
-      return unansweredType1.find(c => c.id !== lastShownCardId) || unansweredType1[0];
+    const remainingType1 = candidateCards.filter(c => c.type === '1' && isCardInTodayRemaining(c.id));
+    if (remainingType1.length > 0) {
+      return remainingType1.find(c => c.id !== lastShownCardId) || remainingType1[0];
     }
 
     const orderedPool = [
-      ...filteredCards.filter(c => c.type === '2'),
-      ...filteredCards.filter(c => c.type === '1')
+      ...candidateCards.filter(c => c.type === '2'),
+      ...candidateCards.filter(c => c.type === '1')
     ];
     const lastIdx = orderedPool.findIndex(c => c.id === lastShownCardId);
     if (lastIdx >= 0) {
@@ -2354,11 +2398,12 @@
     let card = forcedCard;
 
     if (!card) {
-      const { dueCards } = getTodayCounts();
+      const { remainingCards, failedCards } = getTodayCounts();
+      const pool = remainingCards.length > 0 ? remainingCards : failedCards;
       const filterCat = document.getElementById('review-cat-filter').value;
       const filtered = filterCat === 'ALL'
-        ? dueCards
-        : dueCards.filter(c => c.categoryId === filterCat);
+        ? pool
+        : pool.filter(c => c.categoryId === filterCat);
 
       if (!filtered.length) {
         activeQuestionSnapshot = null;
@@ -2394,7 +2439,7 @@
 
     const stats = normalizeCardStats(card);
     const catName = userData.categories.find(c => c.id === card.categoryId)?.name || '未分類';
-    const lockedToday = isCardLockedToday(card);
+    const inFailedToday = isCardInTodayFailed(card.id);
 
     const headerMetaHtml = `
       <div class="card-meta-bar">
@@ -2406,7 +2451,7 @@
         <span>❌ 答錯次數：${stats.wrongCount}</span>
         <span>📉 答錯率：${stats.wrongRate}%</span>
       </div>
-      ${lockedToday ? `<div class="locked-tag">🔁 今日未完成單字（輪流複習池｜狀態保持 0，明天 06:00 後答對才晉級）</div>` : ''}
+      ${inFailedToday ? `<div class="locked-tag">🔥 今日未完成（重複練習中｜費氏階段不前進，直到明日 06:00 重新進入今日剩餘題數）</div>` : ''}
     `;
 
     const actionButtonsHtml = (submitBtnClass) => `
@@ -2523,7 +2568,7 @@
       : userData.cards.find(c => c.id === cardId);
     if (!snap) return;
 
-    if (!confirm(`🌟 確定要將「${snap.en}」標記為「今天真的學會!」，強制進入下一階並列入今日完成嗎？`)) {
+    if (!confirm(`🌟 確定要將「${snap.en}」標記為「今天真的學會!」，強制進入下一階並列入今日已完成嗎？`)) {
       return;
     }
     if (!verifyPasscode('🌟 今天真的學會!確認')) return;
@@ -2540,12 +2585,10 @@
     card.dueDate = addDaysToLogicalDate(today, intervalDays);
     delete card.lockedDate;
 
+    userData.dailyLog.remainingIds = userData.dailyLog.remainingIds.filter(id => id !== card.id);
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== card.id);
     if (!userData.dailyLog.completedIds.includes(card.id)) {
       userData.dailyLog.completedIds.push(card.id);
-    }
-    if (!userData.dailyLog.answeredTodayIds.includes(card.id)) {
-      userData.dailyLog.answeredTodayIds.push(card.id);
     }
 
     isViewingWrongAnswer = false;
@@ -2706,31 +2749,26 @@
       updatePrevQuestionButton();
 
       const isCorrect = evaluateAnswerMatch(snap, rawEnVal, rawZhVal);
+      const wasInTodayRemaining = isCardInTodayRemaining(card.id);
 
       card.shownCount = (typeof card.shownCount === 'number' ? card.shownCount : 0) + 1;
-
-      if (!userData.dailyLog.answeredTodayIds.includes(card.id)) {
-        userData.dailyLog.answeredTodayIds.push(card.id);
-      }
-
       userData.dailyLog.totalAttempts = (userData.dailyLog.totalAttempts || 0) + 1;
-      const wasLockedToday = isCardLockedToday(card);
 
       if (isCorrect) {
         userData.dailyLog.correctAttempts = (userData.dailyLog.correctAttempts || 0) + 1;
 
-        if (!wasLockedToday) {
+        if (wasInTodayRemaining) {
           const nextIndex = Math.min(card.fibIndex + 1, FIB_SEQUENCE.length - 1);
           const intervalDays = FIB_SEQUENCE[nextIndex];
           card.fibIndex = nextIndex;
           card.dueDate = addDaysToLogicalDate(today, intervalDays);
+          delete card.lockedDate;
 
+          userData.dailyLog.remainingIds = userData.dailyLog.remainingIds.filter(id => id !== card.id);
+          userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => id !== card.id);
           if (!userData.dailyLog.completedIds.includes(card.id)) {
             userData.dailyLog.completedIds.push(card.id);
           }
-        } else {
-          card.fibIndex = 0;
-          card.dueDate = today;
         }
 
         saveState(false);
@@ -2745,13 +2783,17 @@
         renderReviewCard(false);
       } else {
         card.wrongCount = (typeof card.wrongCount === 'number' ? card.wrongCount : 0) + 1;
-        card.fibIndex = 0;
-        card.dueDate = today;
-        card.lockedDate = today;
 
-        userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== card.id);
-        if (!userData.dailyLog.failedTodayIds.includes(card.id)) {
-          userData.dailyLog.failedTodayIds.push(card.id);
+        if (wasInTodayRemaining) {
+          userData.dailyLog.remainingIds = userData.dailyLog.remainingIds.filter(id => id !== card.id);
+          userData.dailyLog.completedIds = userData.dailyLog.completedIds.filter(id => id !== card.id);
+          if (!userData.dailyLog.failedTodayIds.includes(card.id)) {
+            userData.dailyLog.failedTodayIds.push(card.id);
+          }
+        } else if (!userData.dailyLog.completedIds.includes(card.id)) {
+          if (!userData.dailyLog.failedTodayIds.includes(card.id)) {
+            userData.dailyLog.failedTodayIds.push(card.id);
+          }
         }
 
         saveState(false);
