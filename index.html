@@ -675,17 +675,6 @@
       margin-bottom: 16px;
     }
 
-    .device-meta-box {
-      background: #FFFFFF;
-      border: 2px solid #DCEDC8;
-      border-radius: 14px;
-      padding: 10px 14px;
-      font-size: 0.88rem;
-      color: #37474F;
-      margin-bottom: 14px;
-      word-break: break-all;
-    }
-
     .dup-alert-box {
       display: none;
       background: #FFF8E1;
@@ -732,138 +721,6 @@
       margin-top: 14px;
       flex-wrap: wrap;
     }
-
-    /* 跨裝置覆蓋警告 Modal */
-    .sync-modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(38, 50, 56, 0.72);
-      z-index: 10000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-    }
-
-    .sync-modal-backdrop.active {
-      display: flex;
-      animation: fadeIn 0.2s ease;
-    }
-
-    .sync-modal-card {
-      background: #FFFFFF;
-      border: 4px solid #FF7043;
-      border-radius: 24px;
-      max-width: 500px;
-      width: 100%;
-      padding: 24px 20px;
-      text-align: center;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
-    }
-
-    .sync-modal-warn-badge {
-      display: inline-block;
-      background: #FFEBEE;
-      color: #C62828;
-      border: 2px solid #EF5350;
-      padding: 6px 14px;
-      border-radius: 16px;
-      font-weight: 900;
-      font-size: 0.96rem;
-      margin-bottom: 10px;
-    }
-
-    .sync-modal-desc {
-      background: #FFF8E1;
-      border: 2px solid #FFD54F;
-      border-radius: 14px;
-      padding: 12px 14px;
-      font-size: 0.96rem;
-      line-height: 1.65;
-      color: #37474F;
-      margin: 12px 0;
-      text-align: left;
-    }
-
-    .random-digit-banner {
-      background: #E0F7FA;
-      border: 3px dashed #00ACC1;
-      border-radius: 16px;
-      padding: 12px;
-      margin: 14px 0;
-    }
-
-    .random-digit-num {
-      font-size: 3rem;
-      font-weight: 900;
-      color: #006064;
-      line-height: 1.1;
-      margin: 4px 0;
-    }
-
-    .digit-keypad {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
-      margin: 14px 0 16px;
-    }
-
-    .digit-key-btn {
-      padding: 12px 0;
-      font-size: 1.25rem;
-      font-weight: 900;
-      border-radius: 12px;
-      border: 2px solid #80DEEA;
-      background: #F5FCFD;
-      color: #006064;
-      cursor: pointer;
-      transition: 0.12s;
-    }
-
-    .digit-key-btn:active {
-      transform: scale(0.94);
-      background: #B2EBF2;
-    }
-
-    /* 同步鎖定遮罩 */
-    .sync-lock-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(38, 50, 56, 0.78);
-      z-index: 10001;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      text-align: center;
-      color: #FFFFFF;
-    }
-
-    .sync-lock-overlay.active {
-      display: flex;
-    }
-
-    .sync-lock-box {
-      background: #263238;
-      border: 3px solid #4DD0E1;
-      border-radius: 24px;
-      padding: 28px 24px;
-      max-width: 380px;
-      width: 100%;
-      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
-    }
-
-    .sync-spinner {
-      font-size: 3.2rem;
-      animation: spinSlow 1.6s linear infinite;
-      display: inline-block;
-      margin-bottom: 10px;
-    }
-
-    @keyframes spinSlow {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
   </style>
 </head>
 <body>
@@ -873,7 +730,7 @@
       <div class="user-info">
         <span>🎈 學習者：Serene</span>
         <span id="sync-status-badge" class="sync-pill">💾 本機儲存</span>
-        <button id="top-sync-btn" class="btn btn-sm btn-secondary" onclick="smartSyncAction(true)">🔄 立即同步</button>
+        <button id="top-sync-btn" class="btn btn-sm btn-secondary" onclick="pullFromCloud(true)">🔄 立即同步</button>
       </div>
       <div class="status-badges">
         <div class="badge badge-done">✅ 今日已完成：<span id="today-done-count">0</span></div>
@@ -1053,10 +910,9 @@
       <h2 style="margin-top:0; color:#33691E;">☁️ iPhone / iPad / 網頁 跨裝置同步設定</h2>
       <div class="sync-box">
         <p style="margin-top:0; line-height:1.6;">
-          本程式已固定使用 <strong>Serene</strong> 帳號，同步僅在<strong>網頁開啟時</strong>與<strong>手動按同步按鈕</strong>時執行（同步期間鎖定網頁，單次逾時上限 <strong>60 秒</strong>）。<br>
-          <strong>「立即同步」</strong>與<strong>「儲存並立即同步」</strong>會比對 UTC 時間戳（<code>Date.now()</code>）與裝置碼；<strong>「上傳本機到雲端」</strong>與<strong>「從雲端下載最新」</strong>則直接強制執行對應方向。
+          本程式已固定使用 <strong>Serene</strong> 帳號，開啟網頁即直接進入，不需登入。<br>
+          單次請求逾時上限為 <strong>60 秒</strong>，雲端主 Bin 完整保存字卡與分類，本機支援最高 <strong>40,000 張</strong>分片儲存：
         </p>
-        <div id="device-meta-info" class="device-meta-box"></div>
         <div class="grid-2">
           <div class="form-group">
             <label>Cloud Bin ID</label>
@@ -1069,36 +925,11 @@
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button id="btn-save-sync" class="btn btn-green" onclick="saveCloudConfigAndSync()">💾 儲存並立即同步</button>
-          <button id="btn-push-cloud" class="btn btn-secondary" onclick="forceUploadAction()">⬆️ 上傳本機到雲端</button>
-          <button id="btn-pull-cloud" class="btn btn-yellow" onclick="forceDownloadAction()">⬇️ 從雲端下載最新</button>
+          <button id="btn-push-cloud" class="btn btn-secondary" onclick="pushToCloud(true)">⬆️ 上傳本機到雲端</button>
+          <button id="btn-pull-cloud" class="btn btn-yellow" onclick="pullFromCloud(true)">⬇️ 從雲端下載最新</button>
         </div>
         <div id="cloud-sync-msg" style="margin-top:12px; font-weight:700; color:#2E7D32;"></div>
       </div>
-    </div>
-  </div>
-
-  <!-- 跨裝置覆蓋警告 Modal -->
-  <div id="cross-device-modal" class="sync-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sync-modal-title">
-    <div class="sync-modal-card">
-      <div id="sync-modal-badge" class="sync-modal-warn-badge">⚠️ 跨裝置覆蓋警告</div>
-      <h3 id="sync-modal-title" style="margin:6px 0 8px; color:#BF360C; font-size:1.35rem;">偵測到不同裝置的資料</h3>
-      <div id="sync-modal-desc" class="sync-modal-desc"></div>
-      <div class="random-digit-banner">
-        <div style="font-size:0.95rem; font-weight:700; color:#00838F;">請按下或輸入下方隨機數字以繼續：</div>
-        <div id="sync-modal-digit" class="random-digit-num">0</div>
-        <div id="sync-modal-feedback" style="font-size:0.88rem; font-weight:700; color:#C62828; min-height:20px;"></div>
-      </div>
-      <div class="digit-keypad" id="sync-digit-keypad"></div>
-      <button type="button" class="btn btn-danger" style="width:100%;" onclick="cancelCrossDeviceModal()">✖ 取消這次同步</button>
-    </div>
-  </div>
-
-  <!-- 全畫面同步鎖定遮罩 -->
-  <div id="sync-lock-overlay" class="sync-lock-overlay" role="alertdialog" aria-live="polite">
-    <div class="sync-lock-box">
-      <div class="sync-spinner">☁️</div>
-      <div id="sync-lock-title" style="font-size:1.35rem; font-weight:900; margin-bottom:8px;">同步進行中，已鎖定網頁</div>
-      <div id="sync-lock-detail" style="font-size:0.96rem; color:#E0F7FA; line-height:1.5;">請稍候，同步完成後會自動解除鎖定...</div>
     </div>
   </div>
 
@@ -1110,8 +941,6 @@
   const LOCAL_META_KEY = 'serene_fib_vocab_meta_v13';
   const LOCAL_CHUNK_PREFIX = 'serene_fib_vocab_chunk_v13_';
   const CLOUD_CFG_KEY = 'serene_fib_vocab_cloud_cfg_v2';
-  const DEVICE_ID_STORAGE_KEY = 'serene_fib_vocab_device_id_v1';
-  const DEVICE_ID_COOKIE_KEY = 'serene_dev_id';
 
   const DEFAULT_BIN_ID = '6b055488ac6210605aa0053b';
   const DEFAULT_MASTER_KEY = '$2a$10$5KW9GkpwVJbQ16MRT.2vtOmJnDfwsLywrc0H3oSugrl5aQwgHral2';
@@ -1121,7 +950,6 @@
   const PAGE_SIZE_LIST = 30;
   const PAGE_SIZE_SEARCH = 30;
 
-  let deviceId = '';
   let userData = createDefaultUserData();
   let cloudConfig = { binId: DEFAULT_BIN_ID, apiKey: DEFAULT_MASTER_KEY };
   let activeQuestionSnapshot = null;
@@ -1141,8 +969,6 @@
   let duplicateIndexMap = new Map();
   let currentListPage = 1;
   let currentSearchPage = 1;
-  let pendingModalResolver = null;
-  let pendingModalExpectedDigit = '';
 
   function isAnyDoubleQuote(ch) {
     return ch === '"' || ch === '“' || ch === '”' || ch === '„' || ch === '‟';
@@ -1250,87 +1076,10 @@
     return audioQueue;
   }
 
-  function readCookieValue(name) {
-    try {
-      const escaped = name.replace(/[.*+?^${}()|[\]\]/g, '\$&');
-      const match = document.cookie.match(new RegExp('(?:^|; )' + escaped + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : '';
-    } catch (e) {
-      return '';
-    }
-  }
-
-  function writeCookieValue(name, val) {
-    try {
-      const maxAge = 60 * 60 * 24 * 365 * 5;
-      document.cookie = `${name}=${encodeURIComponent(val)}; max-age=${maxAge}; path=/; SameSite=Lax`;
-    } catch (e) {}
-  }
-
-  function readHashDeviceId() {
-    try {
-      const h = String(window.location.hash || '');
-      const m = h.match(/(?:^|[&#])dev=([A-Za-z0-9_-]+)/);
-      return m ? m[1] : '';
-    } catch (e) {
-      return '';
-    }
-  }
-
-  function writeHashDeviceId(id) {
-    try {
-      const h = String(window.location.hash || '');
-      if (!h || h === '#') {
-        history.replaceState(null, '', `#dev=${encodeURIComponent(id)}`);
-      } else if (/(?:^|[&#])dev=/.test(h)) {
-        const nextHash = h.replace(/((?:^|[&#])dev=)([A-Za-z0-9_-]+)/, `$1${encodeURIComponent(id)}`);
-        history.replaceState(null, '', nextHash);
-      } else {
-        history.replaceState(null, '', `${h}&dev=${encodeURIComponent(id)}`);
-      }
-    } catch (e) {}
-  }
-
-  function generateNewDeviceId() {
-    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-      return 'dev_' + window.crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-    }
-    return 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-  }
-
-  function initOrRestoreDeviceId() {
-    let lsVal = '';
-    try {
-      lsVal = (localStorage.getItem(DEVICE_ID_STORAGE_KEY) || '').trim();
-    } catch (e) {}
-
-    const ckVal = readCookieValue(DEVICE_ID_COOKIE_KEY).trim();
-    const hsVal = readHashDeviceId().trim();
-
-    const resolved = lsVal || ckVal || hsVal || generateNewDeviceId();
-    deviceId = resolved;
-
-    try {
-      localStorage.setItem(DEVICE_ID_STORAGE_KEY, resolved);
-    } catch (e) {}
-    writeCookieValue(DEVICE_ID_COOKIE_KEY, resolved);
-    writeHashDeviceId(resolved);
-
-    renderDeviceMetaInfo();
-    return resolved;
-  }
-
-  function renderDeviceMetaInfo() {
-    const el = document.getElementById('device-meta-info');
-    if (!el) return;
-    el.innerHTML = `🖥️ <strong>本機裝置碼：</strong><code>${escapeHtml(deviceId)}</code>（已自動備份於 LocalStorage、Cookie 與網址 Hash）`;
-  }
-
   function createDefaultUserData() {
     return {
       userName: FIXED_USER,
       updatedAt: Date.now(),
-      deviceId: deviceId || '',
       categories: [{ id: 'cat_default', name: '基礎單字' }],
       cards: [],
       dailyLog: {
@@ -1613,7 +1362,7 @@
         if (settled) return;
         settled = true;
         if (isPreview) {
-          if (statusMsg) showTemporaryHint(statusMsg, 3500);
+          if (statusMsg) showTemporaryHint(statusMsg, 3000);
           else showTemporaryHint('', 0);
         } else {
           setReviewAudioStatus(statusMsg || '（點擊喇叭可以再聽一次喔）');
@@ -1742,8 +1491,7 @@
 
     const metaPayload = {
       userName: FIXED_USER,
-      updatedAt: Number(userData.updatedAt) || Date.now(),
-      deviceId: userData.deviceId || deviceId,
+      updatedAt: userData.updatedAt,
       categories: userData.categories,
       dailyLog: userData.dailyLog,
       chunkCount: writtenChunks,
@@ -1780,9 +1528,7 @@
           ...createDefaultUserData(),
           ...meta,
           cards: assembledCards,
-          userName: FIXED_USER,
-          updatedAt: Number(meta.updatedAt) || Date.now(),
-          deviceId: meta.deviceId || deviceId
+          userName: FIXED_USER
         };
       }
     } catch (e) {}
@@ -1805,13 +1551,7 @@
         const rawData = localStorage.getItem(legacyKeys[i]);
         if (rawData) {
           const parsed = JSON.parse(rawData);
-          return {
-            ...createDefaultUserData(),
-            ...parsed,
-            userName: FIXED_USER,
-            updatedAt: Number(parsed.updatedAt) || Date.now(),
-            deviceId: parsed.deviceId || deviceId
-          };
+          return { ...createDefaultUserData(), ...parsed, userName: FIXED_USER };
         }
       } catch (e) {}
     }
@@ -1819,7 +1559,6 @@
   }
 
   function loadLocalState() {
-    initOrRestoreDeviceId();
     try {
       const rawCfg = localStorage.getItem(CLOUD_CFG_KEY) || localStorage.getItem('serene_fib_vocab_cloud_cfg_v1');
       if (rawCfg) {
@@ -1838,8 +1577,6 @@
     const loaded = readLocalStateChunked();
     if (loaded) {
       userData = loaded;
-    } else {
-      userData = createDefaultUserData();
     }
 
     rebuildDuplicateIndex();
@@ -1854,158 +1591,39 @@
     if (badge) badge.textContent = text;
   }
 
-  function setPageLocked(locked, titleText = '同步進行中，已鎖定網頁', detailText = '請稍候，同步完成後會自動解除鎖定...') {
-    const overlay = document.getElementById('sync-lock-overlay');
-    const titleEl = document.getElementById('sync-lock-title');
-    const detailEl = document.getElementById('sync-lock-detail');
-    if (titleEl) titleEl.textContent = titleText;
-    if (detailEl) detailEl.textContent = detailText;
-    if (overlay) {
-      overlay.classList.toggle('active', Boolean(locked));
-    }
+  function setSyncButtonsDisabled(disabled) {
     ['top-sync-btn', 'btn-save-sync', 'btn-push-cloud', 'btn-pull-cloud'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.disabled = Boolean(locked);
+      if (el) el.disabled = disabled;
     });
   }
 
-  function markDataModified() {
-    if (!deviceId) initOrRestoreDeviceId();
-    userData.updatedAt = Date.now();
-    userData.deviceId = deviceId;
-  }
-
-  function saveState(options = {}) {
-    const opts = typeof options === 'boolean' ? { modified: options } : (options || {});
-    if (opts.modified) {
-      markDataModified();
-    }
+  function saveState(syncCloud = false) {
     rebuildDuplicateIndex();
+    userData.updatedAt = Date.now();
     const ok = writeLocalStateChunked();
     if (!ok) {
       updateSyncBadge('⚠️ 本機容量受限');
     }
+    if (syncCloud) {
+      pushToCloud(false);
+    }
   }
 
-  function formatTimestampDisplay(ms) {
-    const n = Number(ms) || 0;
-    if (!n) return '無紀錄';
+  function saveCloudConfigAndSync() {
+    const rawBinId = document.getElementById('cloud-bin-id').value.trim();
+    const rawApiKey = document.getElementById('cloud-api-key').value.trim();
+    cloudConfig = {
+      binId: rawBinId || DEFAULT_BIN_ID,
+      apiKey: rawApiKey || DEFAULT_MASTER_KEY
+    };
+    document.getElementById('cloud-bin-id').value = cloudConfig.binId;
+    document.getElementById('cloud-api-key').value = cloudConfig.apiKey;
     try {
-      return new Date(n).toLocaleString('zh-TW', { hour12: false });
-    } catch (e) {
-      return String(n);
-    }
-  }
-
-  function buildDigitKeypad() {
-    const keypad = document.getElementById('sync-digit-keypad');
-    if (!keypad) return;
-    const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-    keypad.innerHTML = digits.map(d =>
-      `<button type="button" class="digit-key-btn" onclick="submitModalDigit('${d}')">${d}</button>`
-    ).join('');
-  }
-
-  function submitModalDigit(digitStr) {
-    if (!pendingModalResolver) return;
-    const feedbackEl = document.getElementById('sync-modal-feedback');
-    if (String(digitStr) === pendingModalExpectedDigit) {
-      const resolveFn = pendingModalResolver;
-      closeCrossDeviceModal(true, resolveFn);
-    } else {
-      if (feedbackEl) {
-        feedbackEl.textContent = `❌ 數字不對（你按了 ${digitStr}，請按「${pendingModalExpectedDigit}」或點「取消這次同步」）`;
-      }
-    }
-  }
-
-  function cancelCrossDeviceModal() {
-    if (!pendingModalResolver) return;
-    const resolveFn = pendingModalResolver;
-    closeCrossDeviceModal(false, resolveFn);
-  }
-
-  function closeCrossDeviceModal(confirmed, resolveFn) {
-    pendingModalResolver = null;
-    pendingModalExpectedDigit = '';
-    const backdrop = document.getElementById('cross-device-modal');
-    if (backdrop) backdrop.classList.remove('active');
-    window.removeEventListener('keydown', handleModalKeydown);
-    if (typeof resolveFn === 'function') {
-      resolveFn(Boolean(confirmed));
-    }
-  }
-
-  function handleModalKeydown(e) {
-    if (!pendingModalResolver) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelCrossDeviceModal();
-      return;
-    }
-    if (/^[0-9]$/.test(e.key)) {
-      e.preventDefault();
-      submitModalDigit(e.key);
-    }
-  }
-
-  function requestCrossDeviceConfirmation({ direction, localDataObj, remoteDataObj }) {
-    return new Promise(resolve => {
-      if (pendingModalResolver) {
-        resolve(false);
-        return;
-      }
-      const randDigit = String(Math.floor(Math.random() * 10));
-      pendingModalExpectedDigit = randDigit;
-      pendingModalResolver = resolve;
-
-      const isUpload = direction === 'UPLOAD';
-      const badgeEl = document.getElementById('sync-modal-badge');
-      const titleEl = document.getElementById('sync-modal-title');
-      const descEl = document.getElementById('sync-modal-desc');
-      const digitEl = document.getElementById('sync-modal-digit');
-      const feedbackEl = document.getElementById('sync-modal-feedback');
-
-      if (badgeEl) {
-        badgeEl.textContent = isUpload ? '⚠️ 跨裝置警告：雲端資料將被覆蓋' : '⚠️ 跨裝置警告：本地端資料將被覆蓋';
-      }
-      if (titleEl) {
-        titleEl.textContent = isUpload
-          ? '準備執行「上傳」（雲端資料將被覆蓋）'
-          : '準備執行「下載」（本地端資料將被覆蓋）';
-      }
-
-      const localUpdated = formatTimestampDisplay(localDataObj.updatedAt);
-      const remoteUpdated = formatTimestampDisplay(remoteDataObj.updatedAt);
-      const localDev = localDataObj.deviceId || '未知裝置';
-      const remoteDev = remoteDataObj.deviceId || '未知裝置';
-      const localCount = Array.isArray(localDataObj.cards) ? localDataObj.cards.length : 0;
-      const remoteCount = Array.isArray(remoteDataObj.cards) ? remoteDataObj.cards.length : 0;
-
-      if (descEl) {
-        descEl.innerHTML = isUpload
-          ? `
-            <div>• <strong>目前動作：</strong>上傳（本機較新 ➔ 寫入雲端）</div>
-            <div>• <strong>覆蓋對象：</strong><span style="color:#C62828; font-weight:900;">雲端資料將被覆蓋</span></div>
-            <div>• <strong>本機：</strong>${localCount} 張 ｜ 修改時間：${escapeHtml(localUpdated)} ｜ 裝置：<code>${escapeHtml(localDev)}</code></div>
-            <div>• <strong>雲端：</strong>${remoteCount} 張 ｜ 修改時間：${escapeHtml(remoteUpdated)} ｜ 裝置：<code>${escapeHtml(remoteDev)}</code></div>
-          `
-          : `
-            <div>• <strong>目前動作：</strong>下載（雲端較新 ➔ 寫入本地端）</div>
-            <div>• <strong>覆蓋對象：</strong><span style="color:#C62828; font-weight:900;">本地端資料將被覆蓋</span></div>
-            <div>• <strong>雲端：</strong>${remoteCount} 張 ｜ 修改時間：${escapeHtml(remoteUpdated)} ｜ 裝置：<code>${escapeHtml(remoteDev)}</code></div>
-            <div>• <strong>本機：</strong>${localCount} 張 ｜ 修改時間：${escapeHtml(localUpdated)} ｜ 裝置：<code>${escapeHtml(localDev)}</code></div>
-          `;
-      }
-
-      if (digitEl) digitEl.textContent = randDigit;
-      if (feedbackEl) feedbackEl.textContent = '';
-
-      buildDigitKeypad();
-      const backdrop = document.getElementById('cross-device-modal');
-      if (backdrop) backdrop.classList.add('active');
-      window.addEventListener('keydown', handleModalKeydown);
-    });
+      localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudConfig));
+    } catch (e) {}
+    updateSyncBadge('☁️ 已啟用雲端同步');
+    pullFromCloud(true);
   }
 
   async function fetchWithTimeout(url, options = {}, timeoutMs = SYNC_TIMEOUT_MS) {
@@ -2023,13 +1641,11 @@
     const categories = Array.isArray(fullData.categories) && fullData.categories.length > 0
       ? fullData.categories
       : [{ id: 'cat_default', name: '基礎單字' }];
-    const updatedAt = Number(fullData.updatedAt) || Date.now();
-    const sourceDeviceId = fullData.deviceId || deviceId;
+    const updatedAt = fullData.updatedAt || Date.now();
 
     return {
       userName: FIXED_USER,
       updatedAt,
-      deviceId: sourceDeviceId,
       totalCards: cards.length,
       categories,
       cards,
@@ -2044,254 +1660,154 @@
     };
   }
 
-  async function fetchRemoteRecord() {
-    const { binId, apiKey } = getActiveCloudConfig();
-    const res = await fetchWithTimeout(
-      `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`,
-      {
-        headers: {
-          'X-Master-Key': apiKey
-        }
-      },
-      SYNC_TIMEOUT_MS
-    );
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const json = await res.json();
-    return json && json.record ? json.record : null;
-  }
-
-  async function putRemoteRecord(payloadObj) {
-    const { binId, apiKey } = getActiveCloudConfig();
-    const serialized = JSON.stringify(payloadObj);
-    const res = await fetchWithTimeout(
-      `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': apiKey
-        },
-        body: serialized
-      },
-      SYNC_TIMEOUT_MS
-    );
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-  }
-
-  function applyRemoteRecordToLocal(remoteData) {
-    const remoteUpdatedAt = Number(remoteData.updatedAt) || 0;
-    const remoteDeviceId = remoteData.deviceId || '';
-    const cards = Array.isArray(remoteData.cards) ? remoteData.cards : [];
-    const categories = Array.isArray(remoteData.categories) && remoteData.categories.length > 0
-      ? remoteData.categories
-      : [{ id: 'cat_default', name: '基礎單字' }];
-
-    userData = {
-      ...createDefaultUserData(),
-      ...remoteData,
-      userName: FIXED_USER,
-      updatedAt: remoteUpdatedAt,
-      deviceId: remoteDeviceId,
-      categories,
-      cards,
-      dailyLog: remoteData.dailyLog || createDefaultUserData().dailyLog
-    };
-
-    rebuildDuplicateIndex();
-    writeLocalStateChunked();
-    syncDailyRollover();
-    refreshAllUI();
-  }
-
-  async function runWithSyncLock(lockTitle, lockDetail, taskFn) {
+  async function pushToCloud(showNotice = false) {
     if (isSyncing) return;
     isSyncing = true;
-    setPageLocked(true, lockTitle, lockDetail);
+    setSyncButtonsDisabled(true);
+
+    const { binId, apiKey } = getActiveCloudConfig();
+    const msgEl = document.getElementById('cloud-sync-msg');
     try {
-      return await taskFn();
+      updateSyncBadge('☁️ 上傳中...');
+      const fullPayload = buildFullCloudPayload(userData);
+      const serialized = JSON.stringify(fullPayload);
+
+      if (showNotice && msgEl) {
+        msgEl.textContent = `⏳ 正在上傳完整資料（共 ${fullPayload.cards.length} 張字卡，最長等候 60 秒）...`;
+      }
+
+      const res = await fetchWithTimeout(
+        `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': apiKey
+          },
+          body: serialized
+        },
+        SYNC_TIMEOUT_MS
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      updateSyncBadge(`☁️ 已同步 (${fullPayload.cards.length} 張)`);
+      if (showNotice && msgEl) {
+        msgEl.textContent = `✅ 上傳成功！雲端目前完整保存 ${fullPayload.cards.length} 張字卡。`;
+      }
+    } catch (e) {
+      updateSyncBadge('⚠️ 同步失敗');
+      if (showNotice && msgEl) {
+        msgEl.textContent = e.name === 'AbortError'
+          ? '⚠️ 上傳逾時（已超過 60 秒），目前本機資料已安全保留。'
+          : `⚠️ 上傳失敗（${e.message || '網路或金鑰錯誤'}），目前本機資料已安全保留。`;
+      }
     } finally {
       isSyncing = false;
-      setPageLocked(false);
+      setSyncButtonsDisabled(false);
     }
   }
 
-  function setSyncNotice(msg) {
+  function hasTodayActivity(logObj, todayStr) {
+    if (!logObj || logObj.date !== todayStr) return false;
+    return (
+      (Array.isArray(logObj.completedIds) && logObj.completedIds.length > 0) ||
+      (Array.isArray(logObj.failedTodayIds) && logObj.failedTodayIds.length > 0) ||
+      (logObj.totalAttempts || 0) > 0
+    );
+  }
+
+  async function pullFromCloud(showNotice = false) {
+    if (isSyncing) return;
+    isSyncing = true;
+    setSyncButtonsDisabled(true);
+
+    const { binId, apiKey } = getActiveCloudConfig();
     const msgEl = document.getElementById('cloud-sync-msg');
-    if (msgEl) msgEl.textContent = msg || '';
-  }
-
-  // 1. 網頁開啟時 與 2. 頂列「立即同步」/「儲存並立即同步」：完整比對機制
-  async function smartSyncAction(showNotice = false) {
-    if (!deviceId) initOrRestoreDeviceId();
-    return runWithSyncLock(
-      '同步進行中，已鎖定網頁',
-      '正在比對本機與雲端最新時間戳與裝置碼（最長等候 60 秒）...',
-      async () => {
-        try {
-          updateSyncBadge('☁️ 同步比對中...');
-          const remoteData = await fetchRemoteRecord();
-
-          if (!remoteData || !Array.isArray(remoteData.cards)) {
-            const payload = buildFullCloudPayload(userData);
-            await putRemoteRecord(payload);
-            updateSyncBadge(`☁️ 已同步 (${payload.cards.length} 張)`);
-            if (showNotice) {
-              setSyncNotice(`✅ 雲端尚無字卡資料，已將本機 ${payload.cards.length} 張字卡上傳至雲端。`);
-            }
-            return;
-          }
-
-          const localUpdatedAt = Number(userData.updatedAt) || 0;
-          const remoteUpdatedAt = Number(remoteData.updatedAt) || 0;
-          const localDev = String(userData.deviceId || deviceId || '');
-          const remoteDev = String(remoteData.deviceId || '');
-          const sameDevice = Boolean(localDev && remoteDev && localDev === remoteDev);
-
-          if (localUpdatedAt === remoteUpdatedAt) {
-            updateSyncBadge(`☁️ 已同步 (${userData.cards.length} 張)`);
-            if (showNotice) {
-              setSyncNotice(`✅ 本機與雲端時間戳相同（${formatTimestampDisplay(localUpdatedAt)}），已是最新版本。`);
-            }
-            return;
-          }
-
-          if (remoteUpdatedAt > localUpdatedAt) {
-            if (!sameDevice) {
-              setPageLocked(false);
-              const ok = await requestCrossDeviceConfirmation({
-                direction: 'DOWNLOAD',
-                localDataObj: userData,
-                remoteDataObj: remoteData
-              });
-              if (!ok) {
-                updateSyncBadge(`☁️ 已取消下載 (${userData.cards.length} 張)`);
-                if (showNotice) {
-                  setSyncNotice('⏹️ 已取消跨裝置下載，保留目前本機資料不變。');
-                }
-                return;
-              }
-              setPageLocked(true, '正在下載雲端資料...', '已確認跨裝置覆蓋，正在寫入本地端...');
-            }
-
-            applyRemoteRecordToLocal(remoteData);
-            updateSyncBadge(`☁️ 已下載 (${userData.cards.length} 張)`);
-            if (showNotice) {
-              setSyncNotice(`✅ 雲端資料較新，已下載覆蓋本地端（共 ${userData.cards.length} 張字卡，時間戳維持不變）。`);
-            }
-            return;
-          }
-
-          // localUpdatedAt > remoteUpdatedAt
-          if (!sameDevice) {
-            setPageLocked(false);
-            const ok = await requestCrossDeviceConfirmation({
-              direction: 'UPLOAD',
-              localDataObj: userData,
-              remoteDataObj: remoteData
-            });
-            if (!ok) {
-              updateSyncBadge(`☁️ 已取消上傳 (${userData.cards.length} 張)`);
-              if (showNotice) {
-                setSyncNotice('⏹️ 已取消跨裝置上傳，保留目前雲端資料不變。');
-              }
-              return;
-            }
-            setPageLocked(true, '正在上傳本機資料...', '已確認跨裝置覆蓋，正在寫入雲端...');
-          }
-
-          const uploadPayload = buildFullCloudPayload(userData);
-          await putRemoteRecord(uploadPayload);
-          updateSyncBadge(`☁️ 已上傳 (${uploadPayload.cards.length} 張)`);
-          if (showNotice) {
-            setSyncNotice(`✅ 本地資料較新，已上傳覆蓋雲端（共 ${uploadPayload.cards.length} 張字卡，時間戳維持不變）。`);
-          }
-        } catch (e) {
-          updateSyncBadge('⚠️ 同步失敗');
-          if (showNotice) {
-            setSyncNotice(
-              e && e.name === 'AbortError'
-                ? '⚠️ 同步逾時（已超過 60 秒），已解除鎖定並保留本機資料。'
-                : `⚠️ 同步失敗（${e.message || '網路或金鑰錯誤'}），已解除鎖定並保留本機資料。`
-            );
-          }
-        }
-      }
-    );
-  }
-
-  // 「上傳本機到雲端」：依字面強制直接上傳，不做時間戳與裝置比對，不改時間戳
-  async function forceUploadAction() {
-    if (!deviceId) initOrRestoreDeviceId();
-    return runWithSyncLock(
-      '強制上傳進行中，已鎖定網頁',
-      '正在直接將本機資料上傳至雲端（不改寫時間戳，最長等候 60 秒）...',
-      async () => {
-        try {
-          updateSyncBadge('☁️ 強制上傳中...');
-          const payload = buildFullCloudPayload(userData);
-          await putRemoteRecord(payload);
-          updateSyncBadge(`☁️ 已上傳 (${payload.cards.length} 張)`);
-          setSyncNotice(`✅ 已強制上傳本機資料到雲端（共 ${payload.cards.length} 張字卡，未修改時間戳）。`);
-        } catch (e) {
-          updateSyncBadge('⚠️ 上傳失敗');
-          setSyncNotice(
-            e && e.name === 'AbortError'
-              ? '⚠️ 強制上傳逾時（已超過 60 秒），已解除鎖定。'
-              : `⚠️ 強制上傳失敗（${e.message || '網路或金鑰錯誤'}），已解除鎖定。`
-          );
-        }
-      }
-    );
-  }
-
-  // 「從雲端下載最新」：依字面強制直接下載，不做時間戳與裝置比對，沿用雲端時間戳
-  async function forceDownloadAction() {
-    if (!deviceId) initOrRestoreDeviceId();
-    return runWithSyncLock(
-      '強制下載進行中，已鎖定網頁',
-      '正在直接從雲端下載最新資料覆蓋本機（最長等候 60 秒）...',
-      async () => {
-        try {
-          updateSyncBadge('☁️ 強制下載中...');
-          const remoteData = await fetchRemoteRecord();
-          if (!remoteData || !Array.isArray(remoteData.cards)) {
-            updateSyncBadge('⚠️ 雲端無資料');
-            setSyncNotice('⚠️ 雲端目前沒有可用的字卡資料。');
-            return;
-          }
-          applyRemoteRecordToLocal(remoteData);
-          updateSyncBadge(`☁️ 已下載 (${userData.cards.length} 張)`);
-          setSyncNotice(`✅ 已強制從雲端下載最新資料覆蓋本機（共 ${userData.cards.length} 張字卡）。`);
-        } catch (e) {
-          updateSyncBadge('⚠️ 下載失敗');
-          setSyncNotice(
-            e && e.name === 'AbortError'
-              ? '⚠️ 強制下載逾時（已超過 60 秒），已解除鎖定。'
-              : `⚠️ 強制下載失敗（${e.message || '網路或金鑰錯誤'}），已解除鎖定。`
-          );
-        }
-      }
-    );
-  }
-
-  function saveCloudConfigAndSync() {
-    const rawBinId = document.getElementById('cloud-bin-id').value.trim();
-    const rawApiKey = document.getElementById('cloud-api-key').value.trim();
-    cloudConfig = {
-      binId: rawBinId || DEFAULT_BIN_ID,
-      apiKey: rawApiKey || DEFAULT_MASTER_KEY
-    };
-    document.getElementById('cloud-bin-id').value = cloudConfig.binId;
-    document.getElementById('cloud-api-key').value = cloudConfig.apiKey;
     try {
-      localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudConfig));
-    } catch (e) {}
-    updateSyncBadge('☁️ 已啟用雲端同步');
-    smartSyncAction(true);
+      updateSyncBadge('☁️ 下載中...');
+      if (showNotice && msgEl) {
+        msgEl.textContent = '⏳ 正在從雲端下載最新資料（最長等候 60 秒）...';
+      }
+
+      const res = await fetchWithTimeout(
+        `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`,
+        {
+          headers: {
+            'X-Master-Key': apiKey
+          }
+        },
+        SYNC_TIMEOUT_MS
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const json = await res.json();
+      const remoteData = json && json.record ? json.record : null;
+
+      if (remoteData && Array.isArray(remoteData.cards)) {
+        const todayStr = getLogicalDateStr();
+        const remoteUpdatedAt = Number(remoteData.updatedAt) || 0;
+        const localUpdatedAt = Number(userData.updatedAt) || 0;
+
+        const shouldApplyRemote =
+          userData.cards.length === 0 ||
+          remoteUpdatedAt >= localUpdatedAt ||
+          remoteData.cards.length !== userData.cards.length;
+
+        if (shouldApplyRemote) {
+          const localHasToday = hasTodayActivity(userData.dailyLog, todayStr);
+          const remoteHasToday = hasTodayActivity(remoteData.dailyLog, todayStr);
+          const mergedDailyLog = (localHasToday && !remoteHasToday)
+            ? userData.dailyLog
+            : (remoteData.dailyLog || userData.dailyLog);
+
+          userData = {
+            ...createDefaultUserData(),
+            ...remoteData,
+            updatedAt: remoteUpdatedAt || Date.now(),
+            categories: Array.isArray(remoteData.categories) && remoteData.categories.length > 0
+              ? remoteData.categories
+              : [{ id: 'cat_default', name: '基礎單字' }],
+            cards: remoteData.cards,
+            dailyLog: mergedDailyLog,
+            userName: FIXED_USER
+          };
+
+          rebuildDuplicateIndex();
+          writeLocalStateChunked();
+          syncDailyRollover();
+          refreshAllUI();
+        }
+
+        updateSyncBadge(`☁️ 已同步 (${userData.cards.length} 張)`);
+        if (showNotice && msgEl) {
+          msgEl.textContent = `✅ 下載同步完成！目前字卡數：${userData.cards.length} 張。`;
+        }
+      } else {
+        isSyncing = false;
+        setSyncButtonsDisabled(false);
+        await pushToCloud(false);
+        updateSyncBadge(`☁️ 已同步 (${userData.cards.length} 張)`);
+        if (showNotice && msgEl) {
+          msgEl.textContent = `✅ 雲端尚無字卡資料，已將本機 ${userData.cards.length} 張字卡上傳至雲端。`;
+        }
+      }
+    } catch (e) {
+      updateSyncBadge('⚠️ 同步失敗');
+      if (showNotice && msgEl) {
+        msgEl.textContent = e.name === 'AbortError'
+          ? '⚠️ 下載逾時（已超過 60 秒），目前本機資料已安全保留。'
+          : `⚠️ 雲端下載失敗（${e.message || '網路或金鑰錯誤'}），目前本機資料已安全保留。`;
+      }
+    } finally {
+      isSyncing = false;
+      setSyncButtonsDisabled(false);
+    }
   }
 
   function syncDailyRollover() {
@@ -2331,7 +1847,7 @@
         totalAttempts: 0,
         correctAttempts: 0
       };
-      saveState({ modified: false });
+      saveState(false);
       return;
     }
 
@@ -2429,8 +1945,7 @@
   }
 
   function verifyPasscode(promptTitle = '🔐 身分驗證') {
-    const inputCode = prompt(`${promptTitle}
-請輸入密碼：`);
+    const inputCode = prompt(`${promptTitle}\n請輸入密碼：`);
     if (inputCode === null) return false;
     if (inputCode.trim() !== PASSCODE_VALUE) {
       alert('❌ 密碼錯誤，無法執行此操作。');
@@ -2450,7 +1965,6 @@
     if (tabName === 'review') renderReviewCard(false);
     if (tabName === 'categories') renderWordList();
     if (tabName === 'stats') renderStatsChart();
-    if (tabName === 'sync') renderDeviceMetaInfo();
   }
 
   function populateCategorySelects() {
@@ -2500,7 +2014,7 @@
     }
     const newCat = { id: 'cat_' + Date.now(), name };
     userData.categories.push(newCat);
-    saveState({ modified: true });
+    saveState(false);
     input.value = '';
     currentListPage = 1;
     populateCategorySelects();
@@ -2519,8 +2033,7 @@
       return;
     }
 
-    if (!confirm(`確定要「全部重置」分類「${targetCat.name}」內的 ${targetCards.length} 張單字卡嗎？
-將記錄所有字卡的英文、中文、詞性，刪除後重新加回成為新字卡。`)) {
+    if (!confirm(`確定要「全部重置」分類「${targetCat.name}」內的 ${targetCards.length} 張單字卡嗎？\n將記錄所有字卡的英文、中文、詞性，刪除後重新加回成為新字卡。`)) {
       return;
     }
     if (!verifyPasscode('🔄 全部重置確認')) return;
@@ -2568,7 +2081,7 @@
     }
 
     currentListPage = 1;
-    saveState({ modified: true });
+    saveState(false);
     refreshAllUI();
     runGlobalSearch(currentSearchPage);
     alert(`✅ 已完成「${targetCat.name}」共 ${rebuiltCards.length} 張單字卡的全部重置！`);
@@ -2586,8 +2099,7 @@
 
     const cardsInCat = userData.cards.filter(c => c.categoryId === catId);
     const confirmMsg = cardsInCat.length > 0
-      ? `確定要刪除「${targetCat.name}」分類嗎？
-此分類內的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原。`
+      ? `確定要刪除「${targetCat.name}」分類嗎？\n此分類內的 ${cardsInCat.length} 張單字卡都會一併刪除且無法復原。`
       : `確定要刪除空分類「${targetCat.name}」嗎？`;
 
     if (!confirm(confirmMsg)) return;
@@ -2601,7 +2113,7 @@
     userData.dailyLog.failedTodayIds = userData.dailyLog.failedTodayIds.filter(id => !removedCardIds.has(id));
 
     currentListPage = 1;
-    saveState({ modified: true });
+    saveState(false);
     refreshAllUI();
     alert(`🗑️ 已刪除分類「${targetCat.name}」及其底下 ${cardsInCat.length} 張單字卡。`);
   }
@@ -2658,7 +2170,7 @@
       activeQuestionSnapshot.zh = newZh;
     }
 
-    saveState({ modified: true });
+    saveState(false);
     refreshAllUI();
     runGlobalSearch(currentSearchPage);
     closeEditCardPanel();
@@ -2669,8 +2181,7 @@
     const card = userData.cards.find(c => c.id === cardId);
     if (!card) return;
 
-    if (!confirm(`確定要「重置」單字卡「${parseQuotedHintString(card.en).plainText}」嗎？
-將會刪除這張字卡並重新建立一張相同英文、中文與詞性的新字卡。`)) {
+    if (!confirm(`確定要「重置」單字卡「${parseQuotedHintString(card.en).plainText}」嗎？\n將會刪除這張字卡並重新建立一張相同英文、中文與詞性的新字卡。`)) {
       return;
     }
     if (!verifyPasscode('🔄 重置單字卡確認')) return;
@@ -2706,7 +2217,7 @@
       lastShownCardId = null;
     }
 
-    saveState({ modified: true });
+    saveState(false);
     refreshAllUI();
     runGlobalSearch(currentSearchPage);
     alert(`🔄 已將「${parseQuotedHintString(freshCard.en).plainText}」重置為新字卡！`);
@@ -2765,9 +2276,7 @@
     const existingMatches = findCardsByExactEnglish(en);
     if (existingMatches.length > 0) {
       const goEdit = confirm(
-        `字庫中已經有 ${existingMatches.length} 張「${parseQuotedHintString(en).plainText}」的單字卡囉！
-要改去修改現有字卡嗎？
-（按「確定」前往修改；按「取消」仍可繼續新增）`
+        `字庫中已經有 ${existingMatches.length} 張「${parseQuotedHintString(en).plainText}」的單字卡囉！\n要改去修改現有字卡嗎？\n（按「確定」前往修改；按「取消」仍可繼續新增）`
       );
       if (goEdit) {
         openEditCardPanel(existingMatches[0].id);
@@ -2804,7 +2313,7 @@
       }
     });
 
-    saveState({ modified: true });
+    saveState(false);
     document.getElementById('word-en').value = '';
     document.getElementById('word-zh').value = '';
     document.getElementById('dup-word-alert').style.display = 'none';
@@ -2923,7 +2432,7 @@
       previousQuestionEntry = null;
       updatePrevQuestionButton();
     }
-    saveState({ modified: true });
+    saveState(false);
     refreshAllUI();
     runGlobalSearch(currentSearchPage);
     return true;
@@ -3248,7 +2757,7 @@
     previousQuestionEntry = null;
     updatePrevQuestionButton();
 
-    saveState({ modified: true });
+    saveState(false);
     updateTopCounters();
     renderReviewCard(false, targetCard, entry.rawEnVal || '', entry.rawZhVal || '');
   }
@@ -3313,7 +2822,7 @@
 
     isViewingWrongAnswer = false;
     isSubmitting = false;
-    saveState({ modified: true });
+    saveState(false);
     updateTopCounters();
     renderReviewCard(false);
   }
@@ -3488,7 +2997,7 @@
           }
         }
 
-        saveState({ modified: true });
+        saveState(false);
         updateTopCounters();
 
         await Promise.all([
@@ -3513,7 +3022,7 @@
           }
         }
 
-        saveState({ modified: true });
+        saveState(false);
         updateTopCounters();
 
         await Promise.all([
@@ -3594,14 +3103,13 @@
     updatePrevQuestionButton();
     renderReviewCard(false);
     renderWordList();
-    renderDeviceMetaInfo();
   }
 
   window.addEventListener('DOMContentLoaded', async () => {
     loadLocalState();
     syncDailyRollover();
     refreshAllUI();
-    await smartSyncAction(false);
+    await pullFromCloud(false);
   });
 </script>
 </body>
