@@ -322,8 +322,9 @@
     }
 
     .letter-slot {
-      width: 34px;
+      min-width: 34px;
       height: 42px;
+      padding: 0 4px;
       border-bottom: 4px solid var(--primary);
       font-size: 1.65rem;
       font-weight: 700;
@@ -342,8 +343,9 @@
     }
 
     .letter-slot.zh-slot {
-      width: 38px;
+      min-width: 38px;
       height: 42px;
+      padding: 0 4px;
       border-bottom: 4px solid var(--accent-pink);
       font-size: 1.45rem;
       color: #AD1457;
@@ -359,7 +361,7 @@
 
     .letter-slot.space {
       border-bottom: none;
-      width: 18px;
+      min-width: 18px;
     }
 
     .audio-btn-big {
@@ -778,9 +780,9 @@
 
       <div class="grid-2">
         <div class="form-group">
-          <label>3. 英文單字（可用雙引號包住提示字母，如 complete"ly"）</label>
+          <label>3. 英文單字（雙引號內為直接提示，如 dis"a"pe"ar"）</label>
           <div style="display:flex; gap:8px;">
-            <input type="text" id="word-en" placeholder='例如：complete"ly" 或 advertisement' oninput="checkDuplicateWordLive()" />
+            <input type="text" id="word-en" placeholder='例如：dis"a"pe"ar" 或 advertisement' oninput="checkDuplicateWordLive()" />
             <button class="btn btn-secondary btn-sm" type="button" onclick="previewSpeech()" style="white-space:nowrap;">🔊 試聽</button>
           </div>
           <div id="preview-speech-status" class="speech-status-hint"></div>
@@ -805,8 +807,8 @@
       </div>
 
       <div class="form-group">
-        <label>5. 中文意思（可用雙引號包住提示字元，如 蠍"子"）</label>
-        <input type="text" id="word-zh" placeholder='例如：蠍"子" 或 廣告' onkeypress="if(event.key==='Enter') addWordCard()" />
+        <label>5. 中文意思（雙引號內為直接提示，如 有“自”信的、在"..."之上）</label>
+        <input type="text" id="word-zh" placeholder='例如：有“自”信的 或 在"..."之上' onkeypress="if(event.key==='Enter') addWordCard()" />
       </div>
 
       <button class="btn btn-green" style="width:100%; font-size:1.15rem;" onclick="addWordCard()">💾 儲存單字卡（立即加入今日剩餘題數）</button>
@@ -829,7 +831,7 @@
         <input type="hidden" id="edit-card-id" />
         <div class="grid-2">
           <div class="form-group">
-            <label>英文單字（支援雙引號提示，如 complete"ly"）</label>
+            <label>英文單字（雙引號內為直接提示，如 dis"a"pe"ar"）</label>
             <input type="text" id="edit-card-en" />
           </div>
           <div class="form-group">
@@ -846,7 +848,7 @@
           </div>
         </div>
         <div class="form-group">
-          <label>中文意思（支援雙引號提示，如 蠍"子"）</label>
+          <label>中文意思（雙引號內為直接提示，如 有“自”信的、在"..."之上）</label>
           <input type="text" id="edit-card-zh" />
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
@@ -974,40 +976,94 @@
   }
 
   /**
-   * 解析含雙引號提示的字串，例如：
-   * - complete"ly" -> plainText: "completely", userRequiredText: "complete", chars: [{ char:'c', revealed:false }, ..., { char:'l', revealed:true }, { char:'y', revealed:true }]
-   * - 蠍"子" -> plainText: "蠍子", userRequiredText: "蠍", chars: [{ char:'蠍', revealed:false }, { char:'子', revealed:true }]
-   * 支援任意位置、多組雙引號，以及各種直彎雙引號。
+   * 嚴格以輸入字串為基準解析雙引號提示（不做任何改字或糾正）：
+   * - plainText: 去掉所有雙引號後的完整字串
+   * - remainingText: 去掉雙引號與引號內提示字元後，使用者需填寫的剩餘字串
+   * - literalText: 原始輸入字串（含雙引號）
+   * - segments: 依字元或連續提示區塊拆解出的顯示單元
    */
   function parseQuotedHintString(rawStr) {
     const src = String(rawStr || '');
     let inQuote = false;
     let plainText = '';
-    let userRequiredText = '';
-    const chars = [];
+    let remainingText = '';
+    const segments = [];
+    let currentHintBuf = '';
+
+    const flushHintBuf = () => {
+      if (currentHintBuf.length > 0) {
+        segments.push({ text: currentHintBuf, revealed: true });
+        currentHintBuf = '';
+      }
+    };
 
     for (let i = 0; i < src.length; i++) {
       const ch = src[i];
       if (isAnyDoubleQuote(ch)) {
-        inQuote = !inQuote;
+        if (inQuote) {
+          flushHintBuf();
+          inQuote = false;
+        } else {
+          inQuote = true;
+        }
         continue;
       }
+
       plainText += ch;
       if (inQuote) {
-        chars.push({ char: ch, revealed: true });
+        currentHintBuf += ch;
       } else {
-        userRequiredText += ch;
-        chars.push({ char: ch, revealed: false });
+        flushHintBuf();
+        remainingText += ch;
+        segments.push({ text: ch, revealed: false });
       }
     }
+    flushHintBuf();
 
     return {
-      rawText: src,
+      literalText: src,
       plainText,
-      userRequiredText,
-      chars,
-      unrevealedCount: chars.filter(item => !item.revealed && item.char !== ' ').length
+      remainingText,
+      segments,
+      unrevealedCount: segments.filter(s => !s.revealed && s.text !== ' ').length
     };
+  }
+
+  function compactForMatch(str) {
+    return String(str || '').replace(/\s+/g, '').toLowerCase();
+  }
+
+  function buildAcceptedAnswerSet(rawStr) {
+    const parsed = parseQuotedHintString(rawStr);
+    const set = new Set();
+
+    const addVariants = (candidate) => {
+      const c = compactForMatch(candidate);
+      if (c) set.add(c);
+    };
+
+    addVariants(parsed.remainingText);
+    addVariants(parsed.plainText);
+    addVariants(parsed.literalText);
+
+    const splitParts = parsed.plainText.split(/[,，/、;；]/).map(s => s.trim()).filter(Boolean);
+    if (splitParts.length > 1) {
+      splitParts.forEach(part => addVariants(part));
+    }
+
+    const splitReqParts = parsed.remainingText.split(/[,，/、;；]/).map(s => s.trim()).filter(Boolean);
+    if (splitReqParts.length > 1) {
+      splitReqParts.forEach(part => addVariants(part));
+    }
+
+    return set;
+  }
+
+  function isUserAnswerAccepted(rawUserVal, rawTargetVal) {
+    const userCompact = compactForMatch(rawUserVal);
+    if (!userCompact) return false;
+    const accepted = buildAcceptedAnswerSet(rawTargetVal);
+    return accepted.has(userCompact);
   }
 
   function waitMs(ms) {
@@ -1063,10 +1119,6 @@
     return `${ny}-${nm}-${nd}`;
   }
 
-  function normalizeCompareStr(str) {
-    return parseQuotedHintString(str).plainText.replace(/\s+/g, '').toLowerCase();
-  }
-
   function buildNewCardFromTemplate(templateCard, todayStr, saltIdx = 0) {
     return {
       id: 'card_' + Date.now() + '_' + saltIdx + '_' + Math.random().toString(36).slice(2, 6),
@@ -1087,7 +1139,7 @@
     const map = new Map();
     for (let i = 0; i < userData.cards.length; i++) {
       const c = userData.cards[i];
-      const key = normalizeCompareStr(c.en);
+      const key = compactForMatch(parseQuotedHintString(c.en).plainText);
       if (!key) continue;
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(c);
@@ -1096,7 +1148,7 @@
   }
 
   function findCardsByExactEnglish(enText) {
-    const key = normalizeCompareStr(enText);
+    const key = compactForMatch(parseQuotedHintString(enText).plainText);
     if (!key) return [];
     const list = duplicateIndexMap.get(key);
     return Array.isArray(list) ? list.slice() : [];
@@ -2481,12 +2533,12 @@
   }
 
   function buildSlotsHtmlFromParsed(parsed, extraSlotClass = '') {
-    return parsed.chars.map(item => {
-      if (item.char === ' ') {
+    return parsed.segments.map(seg => {
+      if (seg.text === ' ') {
         return `<div class="letter-slot space"></div>`;
       }
-      if (item.revealed) {
-        return `<div class="letter-slot ${extraSlotClass} revealed-hint" data-revealed="1">${escapeHtml(item.char)}</div>`;
+      if (seg.revealed) {
+        return `<div class="letter-slot ${extraSlotClass} revealed-hint" data-revealed="1">${escapeHtml(seg.text)}</div>`;
       }
       return `<div class="letter-slot ${extraSlotClass}" data-revealed="0"></div>`;
     }).join('');
@@ -2577,7 +2629,7 @@
           <div id="question-body">
             <div class="prompt-chinese">${escapeHtml(parsedZh.plainText)}</div>
             <div class="prompt-pos">詞性：${escapeHtml(card.pos)}</div>
-            <div style="font-size:0.95rem; color:var(--text-light);">請填入英文單字（需填 ${parsedEn.unrevealedCount} 個字母，總長 ${parsedEn.chars.filter(x => x.char !== ' ').length} 碼）：</div>
+            <div style="font-size:0.95rem; color:var(--text-light);">請填入英文單字（需填 ${parsedEn.unrevealedCount} 格，總共 ${parsedEn.segments.filter(x => x.text !== ' ').length} 格）：</div>
             <div class="letter-slots" id="letter-slots-box">${slotsHtml}</div>
             <div class="form-group" style="max-width:360px; margin:0 auto 16px;">
               <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
@@ -2614,7 +2666,7 @@
               <label>中文意思：</label>
               <input type="text" id="ans-zh-input" value="${escapeHtml(prefillZh)}" placeholder="請輸入中文意思..." oninput="syncChineseSlots(this.value)" onkeypress="if(event.key==='Enter') submitAnswer(${seq})" />
             </div>
-            <div style="font-size:0.9rem; color:var(--text-light);">中文提示（需填 ${parsedZh.unrevealedCount} 個字，總長 ${parsedZh.chars.filter(x => x.char !== ' ').length} 字）：</div>
+            <div style="font-size:0.9rem; color:var(--text-light);">中文提示（需填 ${parsedZh.unrevealedCount} 格，總共 ${parsedZh.segments.filter(x => x.text !== ' ').length} 格）：</div>
             <div class="letter-slots" id="zh-slots-box">${zhSlotsHtml}</div>
             ${actionButtonsHtml('btn-pink')}
           </div>
@@ -2676,7 +2728,7 @@
 
   function syncChineseSlots(val) {
     const slots = document.querySelectorAll('#zh-slots-box .letter-slot.zh-slot');
-    const typedChars = String(val || '').replace(/[\s,，/、;；()（）【】「」『』]/g, '').split('');
+    const typedChars = String(val || '').replace(/\s+/g, '').split('');
     let typedIdx = 0;
 
     slots.forEach(slot => {
@@ -2734,12 +2786,10 @@
 
   function buildEnglishDiffHtml(userEn, targetEn) {
     const parsedTarget = parseQuotedHintString(targetEn);
-    const uClean = String(userEn || '').replace(/\s+/g, '').toLowerCase();
-    const tFullClean = parsedTarget.plainText.replace(/\s+/g, '').toLowerCase();
-    const tReqClean = parsedTarget.userRequiredText.replace(/\s+/g, '').toLowerCase();
-    const expectedClean = (uClean.length > tReqClean.length && tFullClean.startsWith(uClean))
-      ? tFullClean
-      : (uClean === tFullClean ? tFullClean : tReqClean);
+    const uClean = compactForMatch(userEn);
+    const tFullClean = compactForMatch(parsedTarget.plainText);
+    const tReqClean = compactForMatch(parsedTarget.remainingText);
+    const expectedClean = uClean === tFullClean ? tFullClean : tReqClean;
 
     const maxLen = Math.max(uClean.length, expectedClean.length);
     const mismatchPositions = [];
@@ -2751,44 +2801,20 @@
       const ok = uClean[i] !== undefined && expectedClean[i] !== undefined && uClean[i] === expectedClean[i];
       if (!ok) mismatchPositions.push(i + 1);
       chips.push(
-        `<span class="diff-chip ${ok ? 'diff-chip-ok' : 'diff-chip-err'}" title="第 ${i + 1} 碼：你的「${escapeHtml(uCh)}」／正確「${escapeHtml(tCh)}」">${escapeHtml(uCh)}</span>`
+        `<span class="diff-chip ${ok ? 'diff-chip-ok' : 'diff-chip-err'}" title="第 ${i + 1} 碼：你的「${escapeHtml(uCh)}」／基準「${escapeHtml(tCh)}」">${escapeHtml(uCh)}</span>`
       );
     }
 
     const reasonText = !uClean
       ? '英文尚未輸入'
       : mismatchPositions.length > 0
-        ? `英文拼字在第 ${mismatchPositions.join('、')} 個字母有差異（正確為「${parsedTarget.plainText}」，僅需填「${parsedTarget.userRequiredText}」）`
-        : '英文拼字正確';
+        ? `英文在第 ${mismatchPositions.join('、')} 個字元有差異（基準去引號：「${parsedTarget.plainText}」，剩餘填寫：「${parsedTarget.remainingText}」）`
+        : '英文正確';
 
     return {
       chipsHtml: `<div class="diff-char-row">${chips.join('')}</div>`,
       reasonText
     };
-  }
-
-  function checkChineseMatched(rawZhVal, targetZh) {
-    const parsedTarget = parseQuotedHintString(targetZh);
-    const zhAns = normalizeCompareStr(rawZhVal);
-    if (!zhAns) return false;
-
-    const fullPlain = normalizeCompareStr(parsedTarget.plainText);
-    const requiredOnly = normalizeCompareStr(parsedTarget.userRequiredText);
-    const validPlainList = parsedTarget.plainText
-      .split(/[,，/、;；]/)
-      .map(s => normalizeCompareStr(s))
-      .filter(Boolean);
-    const validReqList = parsedTarget.userRequiredText
-      .split(/[,，/、;；]/)
-      .map(s => normalizeCompareStr(s))
-      .filter(Boolean);
-
-    return (
-      zhAns === fullPlain ||
-      zhAns === requiredOnly ||
-      validPlainList.includes(zhAns) ||
-      validReqList.includes(zhAns)
-    );
   }
 
   function renderWrongAnswerCenterView(answerSnapshot, rawEnVal = '', rawZhVal = '') {
@@ -2801,21 +2827,21 @@
     const parsedEn = parseQuotedHintString(answerSnapshot.en);
     const parsedZh = parseQuotedHintString(answerSnapshot.zh);
     const enDiff = buildEnglishDiffHtml(rawEnVal, answerSnapshot.en);
-    const isEnCorrect = checkEnglishMatched(rawEnVal, answerSnapshot.en);
-    const isZhCorrect = answerSnapshot.type === '2' ? checkChineseMatched(rawZhVal, answerSnapshot.zh) : true;
+    const isEnCorrect = isUserAnswerAccepted(rawEnVal, answerSnapshot.en);
+    const isZhCorrect = answerSnapshot.type === '2' ? isUserAnswerAccepted(rawZhVal, answerSnapshot.zh) : true;
 
     let mistakeLines = [];
     if (!isEnCorrect) {
       mistakeLines.push(`❌ ${escapeHtml(enDiff.reasonText)}`);
     } else if (answerSnapshot.type === '2') {
-      mistakeLines.push(`✅ 英文拼字正確`);
+      mistakeLines.push(`✅ 英文正確`);
     }
 
     if (answerSnapshot.type === '2') {
       if (!isZhCorrect) {
-        mistakeLines.push(`❌ 中文意思有誤：你輸入「${escapeHtml(rawZhVal || '未填寫')}」，正確為「${escapeHtml(parsedZh.plainText)}」（僅需填「${escapeHtml(parsedZh.userRequiredText)}」）`);
+        mistakeLines.push(`❌ 中文有誤：你輸入「${escapeHtml(rawZhVal || '未填寫')}」（基準去引號：「${escapeHtml(parsedZh.plainText)}」，剩餘填寫：「${escapeHtml(parsedZh.remainingText)}」）`);
       } else {
-        mistakeLines.push(`✅ 中文意思正確`);
+        mistakeLines.push(`✅ 中文正確`);
       }
     }
 
@@ -2826,7 +2852,7 @@
     wrongStage.style.display = 'block';
     wrongStage.innerHTML = `
       <div class="wrong-center-box">
-        <div class="wrong-center-title">📖 答錯比對與正確答案</div>
+        <div class="wrong-center-title">📖 答錯比對與基準答案</div>
         <div class="wrong-center-en">${escapeHtml(parsedEn.plainText)}</div>
         <div class="prompt-pos" style="margin-bottom:8px;">詞性：${escapeHtml(answerSnapshot.pos)}</div>
         <div class="wrong-center-zh">${escapeHtml(parsedZh.plainText)}</div>
@@ -2845,24 +2871,15 @@
     setTimeout(() => document.getElementById('mem-done-btn')?.focus(), 80);
   }
 
-  function checkEnglishMatched(rawEnVal, targetEn) {
-    const enAns = normalizeCompareStr(rawEnVal);
-    if (!enAns) return false;
-    const parsedTarget = parseQuotedHintString(targetEn);
-    const fullTarget = normalizeCompareStr(parsedTarget.plainText);
-    const reqTarget = normalizeCompareStr(parsedTarget.userRequiredText);
-    return enAns === fullTarget || enAns === reqTarget;
-  }
-
   function evaluateAnswerMatch(snap, rawEnVal, rawZhVal) {
-    const enOk = checkEnglishMatched(rawEnVal, snap.en);
+    const enOk = isUserAnswerAccepted(rawEnVal, snap.en);
     if (!enOk) return false;
 
     if (snap.type === '1') {
       return true;
     }
 
-    return checkChineseMatched(rawZhVal, snap.zh);
+    return isUserAnswerAccepted(rawZhVal, snap.zh);
   }
 
   async function submitAnswer(expectedSeq = null) {
