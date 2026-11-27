@@ -1738,19 +1738,21 @@
     return { doneCount, todoCount, remainingCount, remainingCards, failedCards };
   }
 
-  function getTodayAccuracyText(totalAttempts, correctAttempts) {
-    if (!totalAttempts || totalAttempts <= 0) {
+  function getTodayAccuracyText(remainingCount, doneCount, todoCount) {
+    if (remainingCount !== 0) {
       return '--%';
     }
-    const rate = Math.round((correctAttempts / totalAttempts) * 100);
+    const totalItems = doneCount + todoCount;
+    if (totalItems <= 0) {
+      return '--%';
+    }
+    const rate = Math.round((doneCount / totalItems) * 100);
     return `${rate}%`;
   }
 
   function updateTopCounters() {
     const { doneCount, todoCount, remainingCount } = getTodayCounts();
-    const totalAttempts = userData.dailyLog.totalAttempts || 0;
-    const correctAttempts = userData.dailyLog.correctAttempts || 0;
-    const accText = getTodayAccuracyText(totalAttempts, correctAttempts);
+    const accText = getTodayAccuracyText(remainingCount, doneCount, todoCount);
 
     document.getElementById('today-done-count').textContent = doneCount;
     document.getElementById('today-todo-count').textContent = todoCount;
