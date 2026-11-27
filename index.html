@@ -374,7 +374,7 @@
       font-size: 2.5rem;
       cursor: pointer;
       box-shadow: 0 6px 15px rgba(38, 198, 218, 0.4);
-      margin: 10px auto 12px;
+      margin: 10px auto 8px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -907,11 +907,11 @@
     </div>
 
     <div id="tab-sync" class="tab-panel">
-      <h2 style="margin-top:0; color:#33691E;">☁️ iPhone / iPad / 網頁 跨裝置同步設定（支援 40,000 張自動分批）</h2>
+      <h2 style="margin-top:0; color:#33691E;">☁️ iPhone / iPad / 網頁 跨裝置同步設定</h2>
       <div class="sync-box">
         <p style="margin-top:0; line-height:1.6;">
           本程式已固定使用 <strong>Serene</strong> 帳號，開啟網頁即直接進入，不需登入。<br>
-          支援最高 <strong>40,000 張字卡</strong>，單次請求逾時上限為 <strong>60 秒</strong>，並自動分批上傳與分片本機儲存：
+          單次請求逾時上限為 <strong>60 秒</strong>，雲端主 Bin 完整保存字卡與分類，本機支援最高 <strong>40,000 張</strong>分片儲存：
         </p>
         <div class="grid-2">
           <div class="form-group">
@@ -946,8 +946,6 @@
   const DEFAULT_MASTER_KEY = '$2a$10$5KW9GkpwVJbQ16MRT.2vtOmJnDfwsLywrc0H3oSugrl5aQwgHral2';
 
   const LOCAL_CHUNK_SIZE = 1200;
-  const BATCH_MAX_CARDS = 1500;
-  const BATCH_MAX_BYTES = 380000;
   const SYNC_TIMEOUT_MS = 60000;
   const PAGE_SIZE_LIST = 30;
   const PAGE_SIZE_SEARCH = 30;
@@ -963,6 +961,7 @@
   let lastShownCardId = null;
   let chartInstance = null;
   let preferredVoice = null;
+  let speechUnlocked = false;
   let hintClearTimer = null;
   let searchDebounceTimer = null;
   let audioCtx = null;
@@ -975,13 +974,6 @@
     return ch === '"' || ch === '“' || ch === '”' || ch === '„' || ch === '‟';
   }
 
-  /**
-   * 嚴格以輸入字串為基準解析雙引號提示（不做任何改字或糾正）：
-   * - plainText: 去掉所有雙引號後的完整字串
-   * - remainingText: 去掉雙引號與引號內提示字元後，使用者需填寫的剩餘字串
-   * - literalText: 原始輸入字串（含雙引號）
-   * - segments: 依字元或連續提示區塊拆解出的顯示單元
-   */
   function parseQuotedHintString(rawStr) {
     const src = String(rawStr || '');
     let inQuote = false;
@@ -1192,6 +1184,31 @@
     return audioCtx;
   }
 
+  function unlockSpeechAndAudioOnGesture() {
+    ensureAudioContext();
+    if ('speechSynthesis' in window) {
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        pickSystemVoice();
+        if (!speechUnlocked) {
+          const primer = new SpeechSynthesisUtterance(' ');
+          primer.lang = 'en-US';
+          primer.volume = 0.01;
+          primer.rate = 1.0;
+          primer.onend = () => { speechUnlocked = true; };
+          primer.onerror = () => { speechUnlocked = true; };
+          window.speechSynthesis.speak(primer);
+          speechUnlocked = true;
+        }
+      } catch (e) {}
+    }
+  }
+
+  window.addEventListener('pointerdown', unlockSpeechAndAudioOnGesture, { passive: true });
+  window.addEventListener('touchstart', unlockSpeechAndAudioOnGesture, { passive: true });
+
   function playToneSequence(notes, type, stepSec, noteDurSec, peakGain) {
     return new Promise(resolve => {
       const ctx = ensureAudioContext();
@@ -1288,10 +1305,10 @@
     const voices = window.speechSynthesis.getVoices() || [];
     if (!voices.length) return null;
     preferredVoice =
-      voices.find(v => v.name.includes('Samantha')) ||
-      voices.find(v => v.name.includes('Google US English')) ||
+      voices.find(v => v.lang === 'en-US' && (v.name.includes('Samantha') || v.name.includes('Nicky') || v.name.includes('Google'))) ||
       voices.find(v => v.lang === 'en-US') ||
-      voices.find(v => v.lang.toLowerCase().startsWith('en')) ||
+      voices.find(v => v.lang === 'en-GB') ||
+      voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) ||
       null;
     return preferredVoice;
   }
@@ -1316,70 +1333,117 @@
     }
   }
 
-  function speakEnglishNow(text, isPreview = false) {
+  function setReviewAudioStatus(msg) {
+    const el = document.getElementById('review-audio-status');
+    if (el) el.textContent = msg || '';
+  }
+
+  function speakEnglishNow(text, options = {}) {
+    const { isPreview = false, isAutoPlay = false } = options;
     const clean = parseQuotedHintString(text).plainText.trim();
     if (!clean) return Promise.resolve();
 
     if (isPreview) {
-      showTemporaryHint('🔊 正在播放英文發音...', 3000);
+      showTemporaryHint(`🔊 正在播放「${clean}」...`, 3500);
+    } else if (!isAutoPlay) {
+      setReviewAudioStatus(`🔊 正在播放發音：${clean}`);
     }
 
     if (!('speechSynthesis' in window)) {
-      if (isPreview) showTemporaryHint('⚠️ 此瀏覽器不支援內建語音', 3000);
+      if (isPreview) showTemporaryHint('⚠️ 此裝置瀏覽器不支援語音合成', 3000);
+      else setReviewAudioStatus('⚠️ 此裝置瀏覽器不支援語音合成');
       return Promise.resolve();
     }
 
     return new Promise(resolve => {
       let settled = false;
-      const done = () => {
+      let started = false;
+      const done = (statusMsg = '') => {
         if (settled) return;
         settled = true;
-        if (isPreview) showTemporaryHint('', 0);
+        if (isPreview) {
+          if (statusMsg) showTemporaryHint(statusMsg, 3000);
+          else showTemporaryHint('', 0);
+        } else {
+          setReviewAudioStatus(statusMsg || '（點擊喇叭可以再聽一次喔）');
+        }
         resolve();
       };
 
       try {
-        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+
         const voice = preferredVoice || pickSystemVoice();
         const utter = new SpeechSynthesisUtterance(clean);
         utter.lang = 'en-US';
-        if (voice) utter.voice = voice;
-        utter.rate = 0.9;
+        if (voice) {
+          utter.voice = voice;
+          if (voice.lang) utter.lang = voice.lang;
+        }
+        utter.rate = 0.92;
         utter.volume = 1.0;
 
-        utter.onend = () => done();
-        utter.onerror = (e) => {
-          if (e && e.error === 'canceled') {
-            done();
-            return;
-          }
-          if (isPreview) showTemporaryHint('⚠️ 語音播放失敗，請檢查裝置音量或語音設定', 3000);
+        utter.onstart = () => {
+          started = true;
+          if (isPreview) showTemporaryHint(`🔊 播放中：${clean}`, 3500);
+          else setReviewAudioStatus(`🔊 播放中：${clean}`);
+        };
+
+        utter.onend = () => {
           done();
         };
 
-        window.speechSynthesis.speak(utter);
+        utter.onerror = (e) => {
+          const errName = e && e.error ? String(e.error) : '';
+          if (errName === 'canceled' || errName === 'interrupted') {
+            done('');
+            return;
+          }
+          if (isAutoPlay && !started) {
+            done('🔇 裝置限制自動播放，請點一下上方「🔊」喇叭播放');
+            return;
+          }
+          done('⚠️ 語音播放失敗，請檢查裝置靜音開關與音量');
+        };
 
-        const fallbackMs = Math.max(1200, clean.length * 140 + 900);
-        setTimeout(done, fallbackMs);
+        window.speechSynthesis.speak(utter);
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+
+        const fallbackMs = Math.max(1600, clean.length * 160 + 1100);
+        setTimeout(() => {
+          if (!settled) {
+            if (isAutoPlay && !started) {
+              done('🔇 請點一下上方「🔊」喇叭播放發音');
+            } else {
+              done();
+            }
+          }
+        }, fallbackMs);
       } catch (e) {
-        if (isPreview) showTemporaryHint('⚠️ 語音播放失敗', 3000);
-        done();
+        done('⚠️ 語音播放失敗，請再按一次喇叭');
       }
     });
   }
 
-  function queueSpeakEnglish(text, isPreview = false, expectedSeq = null) {
+  function queueSpeakEnglish(text, options = {}, expectedSeq = null) {
+    const opts = typeof options === 'boolean' ? { isPreview: options, isAutoPlay: false } : options;
     const targetText = parseQuotedHintString(text).plainText.trim();
     if (!targetText) return Promise.resolve();
     return enqueueAudioTask(async () => {
-      if (!isPreview && expectedSeq !== null && expectedSeq !== questionSeq) {
+      if (!opts.isPreview && expectedSeq !== null && expectedSeq !== questionSeq) {
         return;
       }
-      await speakEnglishNow(targetText, isPreview);
+      await speakEnglishNow(targetText, opts);
     });
   }
 
   function previewSpeech() {
+    unlockSpeechAndAudioOnGesture();
     const input = document.getElementById('word-en');
     const val = input ? input.value.trim() : '';
     if (!val) {
@@ -1387,7 +1451,7 @@
       input?.focus();
       return;
     }
-    queueSpeakEnglish(val, true);
+    queueSpeakEnglish(val, { isPreview: true, isAutoPlay: false });
   }
 
   function getActiveCloudConfig() {
@@ -1572,54 +1636,28 @@
     }
   }
 
-  function buildUploadChunks(fullData) {
+  function buildFullCloudPayload(fullData) {
     const cards = Array.isArray(fullData.cards) ? fullData.cards : [];
-    const batchId = 'batch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-    const metaBase = {
+    const categories = Array.isArray(fullData.categories) && fullData.categories.length > 0
+      ? fullData.categories
+      : [{ id: 'cat_default', name: '基礎單字' }];
+    const updatedAt = fullData.updatedAt || Date.now();
+
+    return {
       userName: FIXED_USER,
-      updatedAt: fullData.updatedAt || Date.now(),
-      categories: fullData.categories,
-      dailyLog: fullData.dailyLog,
-      totalCards: cards.length
-    };
-
-    const chunks = [];
-    let currentCards = [];
-    let currentBytes = JSON.stringify(metaBase).length;
-
-    for (let i = 0; i < cards.length; i++) {
-      const c = cards[i];
-      const cBytes = JSON.stringify(c).length + 2;
-      if (
-        currentCards.length > 0 &&
-        (currentCards.length >= BATCH_MAX_CARDS || currentBytes + cBytes > BATCH_MAX_BYTES)
-      ) {
-        chunks.push(currentCards);
-        currentCards = [];
-        currentBytes = JSON.stringify(metaBase).length;
+      updatedAt,
+      totalCards: cards.length,
+      categories,
+      cards,
+      dailyLog: fullData.dailyLog || {
+        date: getLogicalDateStr(),
+        remainingIds: [],
+        completedIds: [],
+        failedTodayIds: [],
+        totalAttempts: 0,
+        correctAttempts: 0
       }
-      currentCards.push(c);
-      currentBytes += cBytes;
-    }
-    if (currentCards.length > 0 || chunks.length === 0) {
-      chunks.push(currentCards);
-    }
-
-    const totalChunks = chunks.length;
-    return chunks.map((chunkCards, idx) => ({
-      syncMeta: {
-        batchId,
-        chunkIndex: idx,
-        totalChunks,
-        totalCards: cards.length,
-        updatedAt: metaBase.updatedAt
-      },
-      userName: FIXED_USER,
-      updatedAt: metaBase.updatedAt,
-      categories: metaBase.categories,
-      cards: chunkCards,
-      dailyLog: metaBase.dailyLog
-    }));
+    };
   }
 
   async function pushToCloud(showNotice = false) {
@@ -1630,47 +1668,55 @@
     const { binId, apiKey } = getActiveCloudConfig();
     const msgEl = document.getElementById('cloud-sync-msg');
     try {
-      const payloads = buildUploadChunks(userData);
-      const totalChunks = payloads.length;
+      updateSyncBadge('☁️ 上傳中...');
+      const fullPayload = buildFullCloudPayload(userData);
+      const serialized = JSON.stringify(fullPayload);
 
-      for (let i = 0; i < totalChunks; i++) {
-        updateSyncBadge(`☁️ 上傳中 (${i + 1}/${totalChunks})...`);
-        if (showNotice && msgEl) {
-          msgEl.textContent = `⏳ 正在分批上傳第 ${i + 1} / ${totalChunks} 批（共 ${userData.cards.length} 張字卡，單批最長等候 60 秒）...`;
-        }
-        const res = await fetchWithTimeout(
-          `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Master-Key': apiKey
-            },
-            body: JSON.stringify(payloads[i])
-          },
-          SYNC_TIMEOUT_MS
-        );
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        if (i < totalChunks - 1) {
-          await waitMs(180);
-        }
+      if (showNotice && msgEl) {
+        msgEl.textContent = `⏳ 正在上傳完整資料（共 ${fullPayload.cards.length} 張字卡，最長等候 60 秒）...`;
       }
 
-      updateSyncBadge('☁️ 雲端已同步');
+      const res = await fetchWithTimeout(
+        `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': apiKey
+          },
+          body: serialized
+        },
+        SYNC_TIMEOUT_MS
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      updateSyncBadge(`☁️ 已同步 (${fullPayload.cards.length} 張)`);
       if (showNotice && msgEl) {
-        msgEl.textContent = `✅ 已完成分批上傳（共 ${totalChunks} 批、${userData.cards.length} 張字卡）！`;
+        msgEl.textContent = `✅ 上傳成功！雲端目前完整保存 ${fullPayload.cards.length} 張字卡。`;
       }
     } catch (e) {
       updateSyncBadge('⚠️ 同步失敗');
       if (showNotice && msgEl) {
         msgEl.textContent = e.name === 'AbortError'
           ? '⚠️ 上傳逾時（已超過 60 秒），目前本機資料已安全保留。'
-          : '⚠️ 上傳失敗，目前本機資料已安全保留，請檢查 Bin ID 與 Master Key。';
+          : `⚠️ 上傳失敗（${e.message || '網路或金鑰錯誤'}），目前本機資料已安全保留。`;
       }
     } finally {
       isSyncing = false;
       setSyncButtonsDisabled(false);
     }
+  }
+
+  function hasTodayActivity(logObj, todayStr) {
+    if (!logObj || logObj.date !== todayStr) return false;
+    return (
+      (Array.isArray(logObj.completedIds) && logObj.completedIds.length > 0) ||
+      (Array.isArray(logObj.failedTodayIds) && logObj.failedTodayIds.length > 0) ||
+      (logObj.totalAttempts || 0) > 0
+    );
   }
 
   async function pullFromCloud(showNotice = false) {
@@ -1682,7 +1728,9 @@
     const msgEl = document.getElementById('cloud-sync-msg');
     try {
       updateSyncBadge('☁️ 下載中...');
-      if (showNotice && msgEl) msgEl.textContent = '⏳ 正在從雲端讀取資料（最長等候 60 秒）...';
+      if (showNotice && msgEl) {
+        msgEl.textContent = '⏳ 正在從雲端下載最新資料（最長等候 60 秒）...';
+      }
 
       const res = await fetchWithTimeout(
         `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`,
@@ -1693,68 +1741,68 @@
         },
         SYNC_TIMEOUT_MS
       );
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
       const json = await res.json();
       const remoteData = json && json.record ? json.record : null;
 
       if (remoteData && Array.isArray(remoteData.cards)) {
-        const localHasTodayLog =
-          userData.dailyLog &&
-          userData.dailyLog.date === getLogicalDateStr() &&
-          (
-            (Array.isArray(userData.dailyLog.completedIds) && userData.dailyLog.completedIds.length > 0) ||
-            (Array.isArray(userData.dailyLog.failedTodayIds) && userData.dailyLog.failedTodayIds.length > 0) ||
-            (userData.dailyLog.totalAttempts || 0) > 0
-          );
+        const todayStr = getLogicalDateStr();
+        const remoteUpdatedAt = Number(remoteData.updatedAt) || 0;
+        const localUpdatedAt = Number(userData.updatedAt) || 0;
 
-        const remoteHasTodayLog =
-          remoteData.dailyLog &&
-          remoteData.dailyLog.date === getLogicalDateStr() &&
-          (
-            (Array.isArray(remoteData.dailyLog.completedIds) && remoteData.dailyLog.completedIds.length > 0) ||
-            (Array.isArray(remoteData.dailyLog.failedTodayIds) && remoteData.dailyLog.failedTodayIds.length > 0) ||
-            (remoteData.dailyLog.totalAttempts || 0) > 0
-          );
+        const shouldApplyRemote =
+          userData.cards.length === 0 ||
+          remoteUpdatedAt >= localUpdatedAt ||
+          remoteData.cards.length !== userData.cards.length;
 
-        if ((remoteData.updatedAt || 0) >= (userData.updatedAt || 0) || userData.cards.length === 0) {
-          const preservedDailyLog = (localHasTodayLog && !remoteHasTodayLog)
+        if (shouldApplyRemote) {
+          const localHasToday = hasTodayActivity(userData.dailyLog, todayStr);
+          const remoteHasToday = hasTodayActivity(remoteData.dailyLog, todayStr);
+          const mergedDailyLog = (localHasToday && !remoteHasToday)
             ? userData.dailyLog
-            : remoteData.dailyLog;
+            : (remoteData.dailyLog || userData.dailyLog);
 
           userData = {
             ...createDefaultUserData(),
             ...remoteData,
-            dailyLog: preservedDailyLog,
+            updatedAt: remoteUpdatedAt || Date.now(),
+            categories: Array.isArray(remoteData.categories) && remoteData.categories.length > 0
+              ? remoteData.categories
+              : [{ id: 'cat_default', name: '基礎單字' }],
+            cards: remoteData.cards,
+            dailyLog: mergedDailyLog,
             userName: FIXED_USER
           };
-          if (!Array.isArray(userData.categories) || userData.categories.length === 0) {
-            userData.categories = [{ id: 'cat_default', name: '基礎單字' }];
-          }
+
           rebuildDuplicateIndex();
           writeLocalStateChunked();
           syncDailyRollover();
           refreshAllUI();
-        } else {
-          isSyncing = false;
-          setSyncButtonsDisabled(false);
-          await pushToCloud(false);
-          return;
         }
-        updateSyncBadge('☁️ 雲端已同步');
-        if (showNotice && msgEl) msgEl.textContent = '✅ 已同步最新雲端資料（Serene）！';
+
+        updateSyncBadge(`☁️ 已同步 (${userData.cards.length} 張)`);
+        if (showNotice && msgEl) {
+          msgEl.textContent = `✅ 下載同步完成！目前字卡數：${userData.cards.length} 張。`;
+        }
       } else {
         isSyncing = false;
         setSyncButtonsDisabled(false);
         await pushToCloud(false);
-        updateSyncBadge('☁️ 雲端已同步');
-        if (showNotice && msgEl) msgEl.textContent = '✅ 雲端尚未建立資料格式，已自動將本機資料初始化上傳！';
+        updateSyncBadge(`☁️ 已同步 (${userData.cards.length} 張)`);
+        if (showNotice && msgEl) {
+          msgEl.textContent = `✅ 雲端尚無字卡資料，已將本機 ${userData.cards.length} 張字卡上傳至雲端。`;
+        }
       }
     } catch (e) {
       updateSyncBadge('⚠️ 同步失敗');
       if (showNotice && msgEl) {
         msgEl.textContent = e.name === 'AbortError'
           ? '⚠️ 下載逾時（已超過 60 秒），目前本機資料已安全保留。'
-          : '⚠️ 雲端讀取失敗，目前本機資料已安全保留，請確認 Bin ID 與 Master Key。';
+          : `⚠️ 雲端下載失敗（${e.message || '網路或金鑰錯誤'}），目前本機資料已安全保留。`;
       }
     } finally {
       isSyncing = false;
@@ -1837,11 +1885,6 @@
   function isCardInTodayFailed(cardId) {
     syncDailyRollover();
     return userData.dailyLog.failedTodayIds.includes(cardId);
-  }
-
-  function isCardInTodayCompleted(cardId) {
-    syncDailyRollover();
-    return userData.dailyLog.completedIds.includes(cardId);
   }
 
   function getTodayCounts() {
@@ -2462,7 +2505,10 @@
       speakBtn.className = 'btn btn-sm btn-secondary';
       speakBtn.style.cssText = 'padding:2px 8px; margin-left:6px;';
       speakBtn.textContent = '🔊';
-      speakBtn.onclick = () => queueSpeakEnglish(c.en, true);
+      speakBtn.onclick = () => {
+        unlockSpeechAndAudioOnGesture();
+        queueSpeakEnglish(c.en, { isPreview: true, isAutoPlay: false });
+      };
       titleDiv.appendChild(speakBtn);
 
       const failedTodayNote = isCardInTodayFailed(c.id) ? ' ｜ 🔥 今日未完成（重複練習中，明日 06:00 重置）' : '';
@@ -2656,7 +2702,8 @@
           <div id="question-body">
             <div style="font-size:1.1rem; font-weight:700; color:var(--text-main); margin-top:6px;">🎧 聽發音，寫出英文和中文！</div>
             <button id="review-play-audio-btn" class="audio-btn-big" type="button">🔊</button>
-            <div style="font-size:0.9rem; color:var(--text-light); margin-bottom:16px;">（點擊喇叭可以再聽一次喔）</div>
+            <div id="review-audio-status" class="speech-status-hint">（點擊喇叭可以再聽一次喔）</div>
+            <div style="margin-bottom:14px;"></div>
             <div class="form-group" style="max-width:380px; margin:0 auto 12px;">
               <label>英文單字：</label>
               <input type="text" id="ans-en-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
@@ -2674,8 +2721,11 @@
         </div>
       `;
       syncChineseSlots(prefillZh);
-      document.getElementById('review-play-audio-btn').onclick = () => queueSpeakEnglish(spokenWord, false, seq);
-      queueSpeakEnglish(spokenWord, false, seq);
+      document.getElementById('review-play-audio-btn').onclick = () => {
+        unlockSpeechAndAudioOnGesture();
+        queueSpeakEnglish(spokenWord, { isPreview: false, isAutoPlay: false }, seq);
+      };
+      queueSpeakEnglish(spokenWord, { isPreview: false, isAutoPlay: true }, seq);
     }
   }
 
@@ -2890,6 +2940,7 @@
     const submitBtn = document.getElementById('submit-ans-btn');
     if (submitBtn && submitBtn.disabled) return;
 
+    unlockSpeechAndAudioOnGesture();
     isSubmitting = true;
     if (submitBtn) submitBtn.disabled = true;
 
@@ -2980,7 +3031,7 @@
         ]);
 
         renderWrongAnswerCenterView(snap, rawEnVal, rawZhVal);
-        await queueSpeakEnglish(snap.en, false, snap.seq);
+        await queueSpeakEnglish(snap.en, { isPreview: false, isAutoPlay: false }, snap.seq);
       }
     } finally {
       if (!isViewingWrongAnswer) {
